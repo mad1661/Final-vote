@@ -4,11 +4,71 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Final Vote</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        padding: 3rem 1rem;
+      }
+      main {
+        width: 100%;
+        max-width: 28rem;
+      }
+      #status {
+        opacity: 0.75;
+      }
+      #options {
+        list-style: none;
+        margin: 1.5rem 0 0;
+        padding: 0;
+        display: grid;
+        gap: 0.75rem;
+      }
+      .option {
+        display: grid;
+        gap: 0.25rem;
+      }
+      .option button {
+        font: inherit;
+        text-align: left;
+        padding: 0.6rem 0.9rem;
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 0.5rem;
+        background: transparent;
+        cursor: pointer;
+      }
+      .option button:not(:disabled):hover {
+        background: color-mix(in srgb, currentColor 8%, transparent);
+      }
+      .option button:disabled {
+        cursor: default;
+      }
+      .option.chosen button {
+        border-color: #4f8ef7;
+      }
+      .bar {
+        height: 0.35rem;
+        border-radius: 0.2rem;
+        background: #4f8ef7;
+        transition: width 0.3s ease;
+      }
+      .tally {
+        font-size: 0.85rem;
+        opacity: 0.75;
+      }
+    </style>
   </head>
   <body>
     <main>
       <h1>Final Vote</h1>
       <p id="status">Connecting to Firebase…</p>
+      <h2 id="question"></h2>
+      <ul id="options"></ul>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>
