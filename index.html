@@ -22,7 +22,7 @@
       #status {
         opacity: 0.75;
       }
-      #options {
+      #names {
         list-style: none;
         margin: 1.5rem 0 0;
         padding: 0;
@@ -51,6 +51,9 @@
       .option.chosen button {
         border-color: #4f8ef7;
       }
+      .option.leading button {
+        font-weight: 600;
+      }
       .bar {
         height: 0.35rem;
         border-radius: 0.2rem;
@@ -61,14 +64,46 @@
         font-size: 0.85rem;
         opacity: 0.75;
       }
+      #add-name-form {
+        margin-top: 2rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      #name-input {
+        font: inherit;
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 0.5rem;
+        background: transparent;
+      }
+      #add-name-form button {
+        font: inherit;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: #4f8ef7;
+        color: white;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
     <main>
       <h1>Final Vote</h1>
       <p id="status">Connecting to Firebase…</p>
-      <h2 id="question"></h2>
-      <ul id="options"></ul>
+      <ul id="names"></ul>
+      <form id="add-name-form">
+        <input
+          id="name-input"
+          type="text"
+          placeholder="Add a name…"
+          maxlength="80"
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Add name</button>
+      </form>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>

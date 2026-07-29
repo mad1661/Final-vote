@@ -1,40 +1,41 @@
 import { app } from "./firebase.js";
 import {
-  POLL,
-  castVote,
+  addName,
   hasVoted,
   markVoted,
+  slugify,
+  voteFor,
   votedFor,
-  watchResults,
-} from "./votes.js";
+  watchNames,
+} from "./names.js";
 
 const status = document.getElementById("status");
-const questionEl = document.getElementById("question");
-const optionsEl = document.getElementById("options");
+const listEl = document.getElementById("names");
+const form = document.getElementById("add-name-form");
+const input = document.getElementById("name-input");
 
-let counts = {};
-
-function totalVotes() {
-  return Object.values(counts).reduce((sum, n) => sum + n, 0);
-}
+let names = [];
 
 function render() {
   const voted = hasVoted();
   const choice = votedFor();
-  const total = totalVotes();
+  const total = names.reduce((sum, n) => sum + n.votes, 0);
+  const leader = names[0];
 
-  optionsEl.replaceChildren(
-    ...POLL.options.map((option) => {
-      const count = counts[option.id] ?? 0;
-      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  listEl.replaceChildren(
+    ...names.map((entry) => {
+      const pct = total > 0 ? Math.round((entry.votes / total) * 100) : 0;
 
       const li = document.createElement("li");
-      li.className = "option" + (option.id === choice ? " chosen" : "");
+      li.className =
+        "option" +
+        (entry.id === choice ? " chosen" : "") +
+        (leader && entry.id === leader.id && entry.votes > 0 ? " leading" : "");
 
       const button = document.createElement("button");
-      button.textContent = option.label;
+      button.textContent = entry.name;
       button.disabled = voted;
-      button.addEventListener("click", () => vote(option.id));
+      button.addEventListener("click", () => vote(entry.id));
 
       const bar = document.createElement("div");
       bar.className = "bar";
@@ -42,24 +43,26 @@ function render() {
 
       const tally = document.createElement("span");
       tally.className = "tally";
-      tally.textContent = voted ? `${count} (${pct}%)` : "";
+      tally.textContent = `${entry.votes} vote${entry.votes === 1 ? "" : "s"} (${pct}%)`;
 
       li.append(button, bar, tally);
       return li;
     })
   );
 
-  if (voted) {
-    status.textContent = `Thanks for voting! ${total} vote${total === 1 ? "" : "s"} so far.`;
+  if (names.length === 0) {
+    status.textContent = "No names yet — add the first one below.";
+  } else if (voted) {
+    status.textContent = `Thanks for voting! ${total} vote${total === 1 ? "" : "s"} cast.`;
   } else {
-    status.textContent = "Pick an option to cast your vote.";
+    status.textContent = "This is the final vote — pick one name.";
   }
 }
 
-async function vote(optionId) {
+async function vote(id) {
   try {
-    await castVote(optionId);
-    markVoted(optionId);
+    await voteFor(id);
+    markVoted(id);
     render();
   } catch (err) {
     console.error("Vote failed:", err);
@@ -67,11 +70,29 @@ async function vote(optionId) {
   }
 }
 
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = input.value.trim();
+  if (!name) return;
+  if (names.some((entry) => entry.id === slugify(name))) {
+    status.textContent = `"${name}" is already on the list.`;
+    input.value = "";
+    return;
+  }
+  try {
+    await addName(name);
+    input.value = "";
+    input.focus();
+  } catch (err) {
+    console.error("Adding name failed:", err);
+    status.textContent = "Could not add that name — please try again.";
+  }
+});
+
 if (app) {
-  questionEl.textContent = POLL.question;
   render();
-  watchResults((next) => {
-    counts = next;
+  watchNames((next) => {
+    names = next;
     render();
   });
 } else {
