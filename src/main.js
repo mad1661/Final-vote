@@ -74,7 +74,7 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const name = input.value.trim();
   if (!name) return;
-  if (names.some((entry) => entry.id === slugify(name))) {
+  if (names.some((entry) => slugify(entry.name) === slugify(name))) {
     status.textContent = `"${name}" is already on the list.`;
     input.value = "";
     return;
