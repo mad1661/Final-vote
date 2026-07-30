@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp site/index.html dist/index.html && sh -c 'cp site/*.png site/*.PNG site/*.jpg dist/ 2>/dev/null; true'",
+    "build": "vite build && node assemble.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

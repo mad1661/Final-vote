@@ -6,7 +6,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         vote: resolve(import.meta.dirname, "vote.html"),
-        admin: resolve(import.meta.dirname, "admin.html"),
+        admin: resolve(import.meta.dirname, "vote-admin.html"),
         embed: resolve(import.meta.dirname, "embed.html"),
       },
     },
