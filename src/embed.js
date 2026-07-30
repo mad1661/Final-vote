@@ -58,7 +58,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v5";
+const VERSION = "v6";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -376,10 +376,15 @@ if (!DIVISIONS.includes(division)) {
     render();
   } else if (app) {
     render();
-    watchBoard((next) => {
-      board = next;
-      render();
-    });
+    watchBoard(
+      (next) => {
+        board = next;
+        render();
+      },
+      (where, err) => {
+        status.textContent = `Data error loading ${where} — ${err?.code ?? "unknown"}. Check the Firestore rules.`;
+      }
+    );
   } else {
     status.textContent = "Failed to initialize.";
   }

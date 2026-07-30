@@ -196,7 +196,11 @@ export async function loadDivisionAssets(division) {
 // Calls `callback` with { byDivision, votes } on every change:
 //   byDivision: { [division]: [{ id, name, nominationDocIds }] } sorted by name
 //   votes: Map of nameId -> { [division]: count }
-export function watchBoard(callback) {
+export function watchBoard(callback, onError) {
+  const reportError = (where) => (err) => {
+    console.error(`watchBoard ${where}:`, err);
+    onError?.(where, err);
+  };
   let adminNames = new Map(); // slug -> name, shared across divisions
   let nominated = new Map(); // division -> Map(slug -> name)
   let nominationDocs = new Map(); // slug -> [nomination doc ids]
@@ -251,7 +255,7 @@ export function watchBoard(callback) {
       });
     });
     emit();
-  });
+  }, reportError("names"));
 
   const stopNoms = onSnapshot(NOMINATIONS, (snapshot) => {
     nominated = new Map();
@@ -277,7 +281,7 @@ export function watchBoard(callback) {
       nominationDocs.set(id, docs);
     });
     emit();
-  });
+  }, reportError("nominations"));
 
   const stopVotes = onSnapshot(VOTES, (snapshot) => {
     votes = new Map();
@@ -292,7 +296,7 @@ export function watchBoard(callback) {
       votes.set(nameId, perName);
     });
     emit();
-  });
+  }, reportError("votes"));
 
   return () => {
     stopNames();
