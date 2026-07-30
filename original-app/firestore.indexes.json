@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "nominations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "division", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

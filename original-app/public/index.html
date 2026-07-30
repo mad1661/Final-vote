@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-title">NHRA 51 Legends</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
+  <link rel="preload" href="https://voting-10a21.web.app/nhra-75-logo.png" as="image">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'display': ['Oswald', 'sans-serif'],
+            'serif-display': ['"Playfair Display"', 'serif'],
+          },
+          colors: {
+            'nhra-red': '#e30613',
+            'board': '#333333',
+            'board-dark': '#2a2a2a',
+            'card-navy': '#2a3444',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html, body { margin: 0; padding: 0; }
+
+    @keyframes logoReveal {
+      0% { opacity: 0; transform: scale(0.7); filter: blur(6px) brightness(0.3); }
+      60% { opacity: 1; transform: scale(1.02); filter: blur(0) brightness(1.3); }
+      100% { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); }
+    }
+    @keyframes textSlideUp {
+      0% { opacity: 0; transform: translateY(30px); filter: blur(3px); }
+      100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+    @keyframes lightStreak {
+      0% { transform: translateX(-100%) skewX(-20deg); opacity: 0; }
+      30% { opacity: 0.7; }
+      100% { transform: translateX(200%) skewX(-20deg); opacity: 0; }
+    }
+    @keyframes glowPulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(227,6,19,0.6), 0 0 60px rgba(227,6,19,0.2); }
+      50% { text-shadow: 0 0 40px rgba(227,6,19,0.9), 0 0 80px rgba(227,6,19,0.4), 0 0 120px rgba(255,69,0,0.15); }
+    }
+    @keyframes subtitleFade {
+      0% { opacity: 0; letter-spacing: 0.4em; }
+      100% { opacity: 1; letter-spacing: 0.2em; }
+    }
+    #intro-screen {
+      background: radial-gradient(ellipse at center, #111 0%, #000 70%);
+      overflow: hidden;
+    }
+    #intro-screen.splash-go .splash-logo { animation: logoReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both; }
+    #intro-screen.splash-go .splash-line1 { animation: textSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both; }
+    #intro-screen.splash-go .splash-line2 { animation: textSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both; }
+    #intro-screen.splash-go .splash-sub { animation: subtitleFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.9s both; }
+    #intro-screen.splash-go .splash-glow { animation: glowPulse 1.5s ease-in-out infinite 1s; }
+    .light-streak {
+      position: absolute; top: 0; left: 0; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), rgba(255,255,255,0.12), rgba(255,255,255,0.06), transparent);
+      animation: lightStreak 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s both;
+      pointer-events: none; z-index: 2;
+    }
+    .light-streak-2 {
+      position: absolute; top: 0; left: 0; width: 40%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(227,6,19,0.05), rgba(227,6,19,0.1), rgba(227,6,19,0.05), transparent);
+      animation: lightStreak 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.6s both;
+      pointer-events: none; z-index: 2;
+    }
+
+    .photo-frame {
+      border: 6px solid white;
+      box-shadow: 3px 5px 15px rgba(0,0,0,0.6);
+      position: relative;
+      overflow: visible;
+      transition: transform 0.3s ease, z-index 0s;
+    }
+    .photo-frame:hover { transform: scale(1.05) !important; z-index: 30 !important; }
+    .photo-frame img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .photo-frame::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: -6px;
+      right: -6px;
+      height: 10px;
+      z-index: 3;
+      background: white;
+      clip-path: polygon(
+        0% 0%, 100% 0%,
+        100% 55%, 97% 30%, 94% 65%, 91% 20%, 88% 50%, 85% 15%,
+        82% 60%, 79% 30%, 76% 55%, 73% 15%, 70% 45%, 67% 25%,
+        64% 65%, 61% 20%, 58% 50%, 55% 10%, 52% 55%, 49% 30%,
+        46% 65%, 43% 15%, 40% 45%, 37% 25%, 34% 60%, 31% 20%,
+        28% 50%, 25% 10%, 22% 55%, 19% 30%, 16% 65%, 13% 15%,
+        10% 45%, 7% 25%, 4% 60%, 1% 20%, 0% 50%
+      );
+    }
+
+    .tape {
+      position: absolute;
+      width: 55px;
+      height: 18px;
+      background: linear-gradient(135deg, rgba(190,185,170,0.35) 0%, rgba(215,210,195,0.55) 50%, rgba(190,185,170,0.35) 100%);
+      z-index: 10;
+      border-radius: 1px;
+      pointer-events: none;
+    }
+    .tape-tl { top: -6px; left: -6px; transform: rotate(-45deg); }
+    .tape-tr { top: -6px; right: -6px; transform: rotate(45deg); }
+    .tape-bl { bottom: -6px; left: -6px; transform: rotate(45deg); }
+    .tape-br { bottom: -6px; right: -6px; transform: rotate(-45deg); }
+
+    .nominations-card {
+      background: #2a3444;
+      border-radius: 4px;
+      box-shadow: 3px 5px 15px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    .nominations-card::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle, #4477cc 35%, #2255bb 36%, #1144aa 55%, transparent 56%);
+      border-radius: 50%;
+      z-index: 10;
+    }
+
+    .watermark-75 {
+      position: absolute;
+      font-size: clamp(200px, 30vw, 450px);
+      font-weight: 900;
+      color: rgba(55,55,55,0.3);
+      z-index: 1;
+      pointer-events: none;
+      font-family: 'Oswald', sans-serif;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .photo-placeholder {
+      background: linear-gradient(145deg, #484848, #3a3a3a, #424242);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-placeholder span {
+      color: rgba(255,255,255,0.25);
+      font-size: 11px;
+      text-align: center;
+      font-family: 'Oswald', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 8px;
+    }
+
+    .upload-zone {
+      border: 2px dashed rgba(255,255,255,0.25);
+      border-radius: 8px;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: #e30613;
+      background: rgba(227,6,19,0.05);
+    }
+    .upload-zone.has-file {
+      border-color: #22c55e;
+      border-style: solid;
+    }
+
+    .form-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: white;
+      width: 100%;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #e30613;
+      background: rgba(255,255,255,0.08);
+    }
+    .form-input::placeholder { color: rgba(255,255,255,0.35); }
+    select.form-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 40px;
+    }
+    select.form-input option { background: #1a1a1a; color: white; }
+    textarea.form-input { min-height: 120px; resize: vertical; }
+  </style>
+</head>
+<body class="bg-board text-white overflow-x-hidden">
+
+  <!-- ===== SPLASH SCREEN ===== -->
+  <div id="intro-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[15vh] sm:justify-center sm:pt-0 px-4">
+    <div class="light-streak"></div>
+    <div class="light-streak-2"></div>
+    <div class="relative z-10 flex flex-col items-center">
+      <img id="splash-logo" src="" alt="NHRA 75th Anniversary"
+           class="splash-logo w-48 sm:w-64 md:w-80 lg:w-96" style="visibility:hidden">
+      <div class="mt-4 sm:mt-8 md:mt-12 text-center">
+        <div id="splash-line1" class="splash-line1 splash-glow text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter font-display">'51</div>
+        <div id="splash-line2" class="splash-line2 splash-glow text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter font-display -mt-1 sm:-mt-4 md:-mt-6">LEGENDS</div>
+        <div class="splash-sub text-red-500 text-sm sm:text-xl md:text-2xl mt-4 sm:mt-6 font-bold tracking-widest font-display">
+          <span id="splash-division-text">DIVISIONS 1-7</span> &bull; 2026
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BACK TO DIVISION BUTTON ===== -->
+  <div id="back-bar" class="sticky top-0 z-[90] bg-black border-b border-zinc-800 py-3 px-4 text-center">
+    <a id="back-link" href="#" target="_top" class="inline-flex items-center gap-2 text-white hover:text-nhra-red text-sm font-bold font-display tracking-wider transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      BACK TO DIVISION PAGE
+    </a>
+  </div>
+
+  <!-- ===== SCRAPBOOK HERO ===== -->
+  <section class="relative bg-board overflow-hidden">
+
+    <div class="watermark-75 bottom-[-5%] right-[10%]" aria-hidden="true">75</div>
+
+    <div class="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-10 md:py-14 lg:py-16">
+
+      <!-- === TOP ROW === -->
+      <div class="flex flex-col md:flex-row items-center md:items-start justify-center md:justify-between gap-6 md:gap-4">
+
+        <div class="photo-frame photo-placeholder w-56 sm:w-60 md:w-64 lg:w-72 h-40 sm:h-44 md:h-48 md:-rotate-3 md:mt-6 z-[5]">
+          <img id="photo-1" src="" alt="Vintage Drag Racing" class="hidden">
+          <span>Vintage Drag Racing<br>Photo</span>
+          <div class="tape tape-tl"></div>
+          <div class="tape tape-tr"></div>
+        </div>
+
+        <div class="photo-frame photo-placeholder w-56 sm:w-64 md:w-72 lg:w-80 h-56 sm:h-64 md:h-72 lg:h-80 md:rotate-2 md:-mt-2 z-[6]">
+          <img id="photo-2" src="" alt="Champion" class="hidden">
+          <span>Trophy Winner<br>Photo</span>
+          <div class="tape tape-tl"></div>
+          <div class="tape tape-br"></div>
+        </div>
+
+        <div class="flex flex-col items-center z-[8] my-4 md:my-2 shrink-0">
+          <img id="hero-logo" src="" alt="NHRA 75th Anniversary"
+               class="w-36 sm:w-44 md:w-52 lg:w-60 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+          <div id="hero-heading" class="text-center mt-3 md:mt-4">
+            <h1 id="hero-title" class="text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-bold tracking-wider font-display leading-tight">
+              51 LEGENDS
+            </h1>
+            <h2 id="hero-subtitle" class="text-xl sm:text-2xl md:text-2xl lg:text-3xl font-bold italic font-serif-display mt-0.5">
+              OF THEIR DIVISION
+            </h2>
+          </div>
+        </div>
+
+        <div class="photo-frame photo-placeholder w-56 sm:w-60 md:w-64 lg:w-72 h-40 sm:h-44 md:h-48 md:rotate-4 md:mt-10 z-[5]">
+          <img id="photo-3" src="" alt="Race Car" class="hidden">
+          <span>Race Car<br>Photo</span>
+          <div class="tape tape-tl"></div>
+          <div class="tape tape-tr"></div>
+        </div>
+      </div>
+
+      <!-- === BOTTOM ROW === -->
+      <div class="flex flex-col md:flex-row items-center md:items-end justify-center md:justify-between gap-6 md:gap-4 mt-8 md:mt-4 lg:mt-2">
+
+        <div class="flex flex-col items-center gap-4 md:gap-5 z-[8] max-w-sm">
+          <img id="division-badge" src="" alt="Division Badge"
+               class="w-36 sm:w-40 md:w-44 lg:w-52 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+          <p class="text-white text-xs sm:text-sm md:text-sm lg:text-base font-bold uppercase leading-relaxed tracking-wide font-display text-center"
+             style="max-width: 380px;">
+            Our sport was founded by people who had drive, passion and a commitment to excellence.
+            Help us honor the legends of our sport!
+          </p>
+        </div>
+
+        <div class="photo-frame photo-placeholder w-72 sm:w-80 md:w-96 lg:w-[28rem] h-40 sm:h-44 md:h-48 lg:h-56 md:-rotate-2 z-[6]">
+          <img id="photo-4" src="" alt="Racing Crew" class="hidden">
+          <span>Racing Crew<br>Group Photo</span>
+          <div class="tape tape-tl"></div>
+          <div class="tape tape-br"></div>
+        </div>
+
+        <a href="#nominate"
+           class="nominations-card p-5 sm:p-6 lg:p-7 max-w-[280px] z-[8] cursor-pointer hover:scale-[1.03] transition-transform block no-underline">
+          <h3 class="text-nhra-red text-lg sm:text-xl font-bold tracking-wider mb-3 font-display flex items-center justify-center gap-2">
+            <span class="inline-block w-4 h-4 bg-nhra-red rounded-sm"></span>
+            NOMINATIONS
+          </h3>
+          <p class="text-white text-xs sm:text-sm font-semibold uppercase leading-relaxed tracking-wide text-center">
+            Taking nominations for racers, crew members, sponsors, track operators
+            or anyone who is a legend of our sport in their division!
+          </p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== NOMINATION FORM ===== -->
+  <section id="nominate" class="py-10 sm:py-12 md:py-14 bg-gradient-to-b from-board via-zinc-900 to-black">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6">
+
+      <div class="text-center mb-10 sm:mb-14">
+        <img id="form-division-logo" src="" alt="Division Logo" class="w-36 sm:w-44 md:w-52 mx-auto mb-4">
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight font-display">NOMINATE A LEGEND</h2>
+        <p id="form-division-name" class="text-nhra-red text-lg sm:text-xl mt-2 font-semibold tracking-wider font-display"></p>
+      </div>
+
+      <form id="nomination-form" class="space-y-6">
+        <input type="hidden" id="form-division" name="division" value="">
+
+        <div>
+          <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Nominee Full Name *</label>
+          <input type="text" name="nomineeName" class="form-input" placeholder="Enter the nominee's full name" required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Category *</label>
+          <select name="category" class="form-input" required>
+            <option value="" disabled selected>Select a category</option>
+            <option value="racer">Racer</option>
+            <option value="crew_member">Crew Member/Crew Chief</option>
+            <option value="sponsor">Sponsor</option>
+            <option value="track_operator">Track Operator</option>
+            <option value="official">Official / Volunteer</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Years Active / Era</label>
+          <input type="text" name="yearsActive" class="form-input" placeholder="e.g., 1975-1995 or 1980s">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Why are they a legend? *</label>
+          <textarea name="reason" class="form-input"
+                    placeholder="Tell us about their contributions to NHRA drag racing and why they deserve to be recognized..."
+                    required></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Photo of Nominee (optional)</label>
+          <div id="upload-zone" class="upload-zone p-6 sm:p-8 text-center">
+            <input type="file" id="photo-upload" name="photo" accept="image/*" class="hidden">
+            <div id="upload-placeholder">
+              <svg class="w-10 h-10 mx-auto mb-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <p class="text-zinc-400 text-sm">Drag and drop a photo here, or <span class="text-nhra-red underline">browse</span></p>
+              <p class="text-zinc-600 text-xs mt-1">JPG, PNG, GIF up to 10MB</p>
+            </div>
+            <div id="upload-preview" class="hidden">
+              <img id="preview-image" src="" alt="Preview" class="max-h-48 mx-auto rounded mb-2">
+              <p id="preview-filename" class="text-zinc-400 text-sm"></p>
+              <button type="button" id="remove-photo" class="text-nhra-red text-sm mt-1 hover:underline">Remove</button>
+            </div>
+          </div>
+          <div id="photo-rights-wrap" class="hidden mt-3">
+            <label class="flex items-start gap-3 cursor-pointer select-none">
+              <input type="checkbox" id="photo-rights-cb" class="accent-nhra-red w-4 h-4 mt-0.5 flex-shrink-0">
+              <span class="text-zinc-400 text-xs leading-relaxed">By uploading this photo, I confirm that I own the rights to this image or have obtained permission from the rights holder, and I grant NHRA the right to use, reproduce, and display this photo in connection with the 51 Legends program.</span>
+            </label>
+          </div>
+        </div>
+
+        <hr class="border-zinc-700">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Your Name *</label>
+            <input type="text" name="nominatorName" class="form-input" placeholder="Your full name" required>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-zinc-300 mb-2 uppercase tracking-wider font-display">Your Email *</label>
+            <input type="email" name="nominatorEmail" class="form-input" placeholder="your@email.com" required>
+          </div>
+        </div>
+
+        <div class="pt-4">
+          <button type="submit" id="submit-btn"
+                  class="w-full bg-nhra-red hover:bg-red-700 text-white text-xl font-black py-4 px-8 rounded transition-colors tracking-wider font-display">
+            SUBMIT NOMINATION
+          </button>
+        </div>
+
+        <div id="form-status" class="hidden text-center py-4 rounded"></div>
+      </form>
+
+      <div id="success-message" class="hidden text-center py-12">
+        <div class="text-6xl mb-4">&#127942;</div>
+        <h3 class="text-3xl font-black mb-3 font-display">NOMINATION SUBMITTED!</h3>
+        <p class="text-zinc-400 text-lg mb-6">Thank you for helping us honor the legends of NHRA drag racing.</p>
+        <button id="nominate-another"
+                class="bg-zinc-700 hover:bg-zinc-600 text-white px-8 py-3 rounded font-semibold transition-colors font-display tracking-wider">
+          NOMINATE ANOTHER LEGEND
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="bg-black border-t border-zinc-800 py-8 sm:py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+      <img id="footer-logo" src="" alt="NHRA" class="w-16 sm:w-20 mx-auto mb-4" loading="lazy" decoding="async">
+      <p class="text-zinc-500 text-sm font-display tracking-wider">NHRA 75th Anniversary &bull; 51 Legends</p>
+      <p class="text-zinc-600 text-xs mt-2">&copy; 2026 NHRA. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- ===== FIREBASE SDK ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <script>
+    // =====================================================
+    //  FIREBASE CONFIG
+    // =====================================================
+    var FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyB9pTTJApbqOAwQ7vwAgK7nMZVWAElpwIc",
+      authDomain:        "voting-10a21.firebaseapp.com",
+      projectId:         "voting-10a21",
+      storageBucket:     "voting-10a21.firebasestorage.app",
+      messagingSenderId: "851898047005",
+      appId:             "1:851898047005:web:0f7e1197ba1b8713c484f4",
+      measurementId:     "G-Q531CJ5S36"
+    };
+
+    // =====================================================
+    //  IMAGE HOSTING — images load from Firebase Hosting
+    // =====================================================
+    var IMAGE_BASE = 'https://voting-10a21.web.app/';
+
+    function assetUrl(filename) {
+      return IMAGE_BASE + filename;
+    }
+
+    // Optional: set photo URLs for the scrapbook hero section
+    var HERO_PHOTOS = {
+      photo1: assetUrl('photo-default-1.jpg'),
+      photo2: assetUrl('photo-default-2.jpg'),
+      photo3: assetUrl('photo-default-3.jpg'),
+      photo4: assetUrl('photo-default-4.jpg')
+    };
+
+    // =====================================================
+    //  DIVISION DATA
+    // =====================================================
+    var DIVISIONS = {
+      "1": { name: "Northeast Division",    nickname: "Division One",       logo: "D1.PNG",     logoSmall: "D1-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  },
+      "2": { name: "Southeast Division",    nickname: "Division Two",       logo: "D2.PNG",     logoSmall: "D2-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  },
+      "3": { name: "North Central Division",nickname: "Division Three",     logo: "D3.PNG",     logoSmall: "D3-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  },
+      "4": { name: "South Central Division",nickname: "Division Four",      logo: "D4.PNG",     logoSmall: "D4-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  },
+      "5": { name: "West Central Division", nickname: "Division Five",      logo: "D5.PNG",     logoSmall: "D5-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  },
+      "6": { name: "Northwest Division",    nickname: "Division Six",       logo: "D6.PNG",     logoSmall: "D6-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  },
+      "7": { name: "Pacific Division",      nickname: "Magnificent Seven",  logo: "D7.PNG",     logoSmall: "D7-small.png",     logo75: "nhra-75-logo.png",  logo75small: "nhra-75-logo-small.png"  }
+    };
+
+    // =====================================================
+    //  DIVISION DETECTION
+    //  Works from: hostname, parent frame URL, or ?div= param
+    // =====================================================
+    function detectDivision() {
+      var host = window.location.hostname.toLowerCase();
+      var m = host.match(/nhradiv(\d)/);
+      if (m && DIVISIONS[m[1]]) return m[1];
+      try {
+        var parentHost = window.top.location.hostname.toLowerCase();
+        m = parentHost.match(/nhradiv(\d)/);
+        if (m && DIVISIONS[m[1]]) return m[1];
+      } catch(e) {}
+
+      var params = new URLSearchParams(window.location.search);
+      var p = params.get('division') || params.get('div');
+      if (p && DIVISIONS[p]) return p;
+
+      return null;
+    }
+
+    var currentDivision = detectDivision() || '1';
+    var divInfo = DIVISIONS[currentDivision];
+
+    // =====================================================
+    //  APPLY BRANDING
+    // =====================================================
+    document.getElementById('page-title').textContent = 'NHRA 51 Legends — ' + divInfo.name;
+    document.getElementById('splash-division-text').textContent = divInfo.name.toUpperCase();
+
+    // Division-specific 75th logo on hero, form header, and footer (splash is set by startSplash after Firebase resolves)
+    document.getElementById('hero-logo').src          = assetUrl(divInfo.logo75);
+    document.getElementById('footer-logo').src        = assetUrl(divInfo.logo75small);
+    document.getElementById('form-division-logo').src = assetUrl(divInfo.logo75small);
+    document.getElementById('form-division-logo').alt = divInfo.name + ' 75th';
+
+    // Division badge
+    document.getElementById('division-badge').src = assetUrl(divInfo.logoSmall || divInfo.logo);
+    document.getElementById('division-badge').alt = divInfo.name;
+
+    document.getElementById('form-division-name').textContent = divInfo.name;
+    document.getElementById('form-division').value = currentDivision;
+
+    var backLink = document.getElementById('back-link');
+    backLink.textContent = '';
+    var arrow = document.createElement('svg');
+    arrow.setAttribute('class', 'w-4 h-4');
+    arrow.setAttribute('fill', 'none');
+    arrow.setAttribute('stroke', 'currentColor');
+    arrow.setAttribute('stroke-width', '2');
+    arrow.setAttribute('viewBox', '0 0 24 24');
+    arrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>';
+    backLink.appendChild(arrow);
+    backLink.appendChild(document.createTextNode(' BACK TO ' + divInfo.name.toUpperCase() + ' PAGE'));
+    try {
+      var parentOrigin = window.top.location.origin;
+      backLink.href = parentOrigin;
+      backLink.target = '_top';
+    } catch(e) {
+      backLink.href = 'https://www.nhradiv' + currentDivision + '.com';
+      backLink.target = '_top';
+    }
+
+    function applyHeroPhotos() {
+      ['photo1','photo2','photo3','photo4'].forEach(function(key, i) {
+        var url = HERO_PHOTOS[key];
+        if (url) {
+          var el = document.getElementById('photo-' + (i + 1));
+          el.src = url;
+          el.classList.remove('hidden');
+          el.parentElement.classList.remove('photo-placeholder');
+          var span = el.parentElement.querySelector('span');
+          if (span) span.remove();
+        }
+      });
+    }
+
+    function applyLogo75(url) {
+      document.getElementById('splash-logo').src       = url;
+      document.getElementById('hero-logo').src          = url;
+      document.getElementById('form-division-logo').src = url;
+    }
+
+    applyHeroPhotos();
+
+    // =====================================================
+    //  SPLASH + FIREBASE INIT
+    // =====================================================
+    var splashStarted = false;
+
+    function startSplash() {
+      if (splashStarted) return;
+      splashStarted = true;
+      var splashLogo = document.getElementById('splash-logo');
+      if (!splashLogo.src || splashLogo.src === location.href) {
+        splashLogo.src = assetUrl(divInfo.logo75);
+      }
+
+      function go() {
+        splashLogo.style.visibility = 'visible';
+        document.getElementById('intro-screen').classList.add('splash-go');
+        setTimeout(function() {
+          var intro = document.getElementById('intro-screen');
+          if (intro) {
+            intro.style.transition = 'opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1), transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)';
+            intro.style.opacity = '0';
+            intro.style.transform = 'scale(1.04)';
+            setTimeout(function() { intro.style.display = 'none'; }, 700);
+          }
+        }, 2200);
+      }
+
+      if (splashLogo.complete && splashLogo.naturalWidth > 0) {
+        go();
+      } else {
+        splashLogo.onload = go;
+        setTimeout(go, 1500);
+      }
+    }
+
+    var firebaseReady = false;
+    var db, storage;
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      storage = firebase.storage();
+      firebaseReady = true;
+
+      var fallbackTimer = setTimeout(startSplash, 800);
+
+      Promise.all([
+        db.collection('divisionAssets').doc(currentDivision).get(),
+        db.collection('divisionAssets').doc('default').get()
+      ]).then(function(results) {
+        clearTimeout(fallbackTimer);
+        var divAssets = results[0].exists ? results[0].data() : {};
+        var defAssets = results[1].exists ? results[1].data() : {};
+        var changed = false;
+        ['photo1','photo2','photo3','photo4'].forEach(function(key) {
+          var url = divAssets[key] || defAssets[key];
+          if (url) { HERO_PHOTOS[key] = url; changed = true; }
+        });
+        if (changed) applyHeroPhotos();
+        var logoUrl = divAssets.logo75 || defAssets.logo75;
+        if (logoUrl) applyLogo75(logoUrl);
+
+        var hidden = divAssets.heroTextHidden !== undefined ? divAssets.heroTextHidden : defAssets.heroTextHidden;
+        if (hidden === true) {
+          document.getElementById('hero-heading').style.display = 'none';
+        } else {
+          var title = divAssets.heroTitle || defAssets.heroTitle;
+          var subtitle = divAssets.heroSubtitle || defAssets.heroSubtitle;
+          if (title) document.getElementById('hero-title').textContent = title;
+          if (subtitle) document.getElementById('hero-subtitle').textContent = subtitle;
+        }
+
+        var sLine1 = divAssets.splashLine1 || defAssets.splashLine1;
+        var sLine2 = divAssets.splashLine2 || defAssets.splashLine2;
+        if (sLine1) document.getElementById('splash-line1').textContent = sLine1;
+        if (sLine2) document.getElementById('splash-line2').textContent = sLine2;
+
+        startSplash();
+      }).catch(function(e) {
+        console.warn('Custom assets load skipped:', e);
+        clearTimeout(fallbackTimer);
+        startSplash();
+      });
+    } catch (e) {
+      console.warn('Firebase init failed:', e);
+      startSplash();
+    }
+
+    // =====================================================
+    //  PHOTO UPLOAD
+    // =====================================================
+    var uploadZone    = document.getElementById('upload-zone');
+    var fileInput     = document.getElementById('photo-upload');
+    var previewDiv    = document.getElementById('upload-preview');
+    var placeholderDiv= document.getElementById('upload-placeholder');
+    var previewImage  = document.getElementById('preview-image');
+    var previewName   = document.getElementById('preview-filename');
+    var removeBtn     = document.getElementById('remove-photo');
+    var selectedFile  = null;
+
+    uploadZone.addEventListener('click', function(e) {
+      if (e.target.id !== 'remove-photo') fileInput.click();
+    });
+
+    uploadZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', function() {
+      uploadZone.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', function() {
+      if (fileInput.files.length) handleFile(fileInput.files[0]);
+    });
+
+    removeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      clearFile();
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) { alert('Please select an image file.'); return; }
+      if (file.size > 10 * 1024 * 1024)   { alert('File must be under 10 MB.');    return; }
+      selectedFile = file;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        previewImage.src = ev.target.result;
+        previewName.textContent = file.name;
+        placeholderDiv.classList.add('hidden');
+        previewDiv.classList.remove('hidden');
+        uploadZone.classList.add('has-file');
+        document.getElementById('photo-rights-wrap').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      fileInput.value = '';
+      previewDiv.classList.add('hidden');
+      placeholderDiv.classList.remove('hidden');
+      uploadZone.classList.remove('has-file');
+      document.getElementById('photo-rights-wrap').classList.add('hidden');
+      document.getElementById('photo-rights-cb').checked = false;
+    }
+
+    // =====================================================
+    //  IMAGE OPTIMIZATION
+    // =====================================================
+    function optimizeImage(file, maxWidth, quality) {
+      maxWidth = maxWidth || 1200;
+      quality = quality || 0.75;
+      if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
+        return Promise.resolve(file);
+      }
+      return new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() {
+          var w = img.width, h = img.height;
+          if (w <= maxWidth && file.size < 500 * 1024) {
+            URL.revokeObjectURL(img.src);
+            resolve(file);
+            return;
+          }
+          if (w > maxWidth) {
+            h = Math.round(h * (maxWidth / w));
+            w = maxWidth;
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(function(blob) {
+            URL.revokeObjectURL(img.src);
+            resolve(blob && blob.size < file.size ? blob : file);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = function() {
+          URL.revokeObjectURL(img.src);
+          resolve(file);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    // =====================================================
+    //  FORM SUBMISSION
+    // =====================================================
+    var form       = document.getElementById('nomination-form');
+    var submitBtn  = document.getElementById('submit-btn');
+    var statusDiv  = document.getElementById('form-status');
+    var successDiv = document.getElementById('success-message');
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if (!firebaseReady) {
+        alert('Firebase is not configured yet.');
+        return;
+      }
+
+      if (selectedFile && !document.getElementById('photo-rights-cb').checked) {
+        alert('Please confirm that you own the rights to the uploaded photo before submitting.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'SUBMITTING...';
+      statusDiv.classList.add('hidden');
+
+      try {
+        var fd = new FormData(form);
+        var data = {
+          nomineeName:    fd.get('nomineeName'),
+          category:       fd.get('category'),
+          yearsActive:    fd.get('yearsActive') || '',
+          reason:         fd.get('reason'),
+          nominatorName:  fd.get('nominatorName'),
+          nominatorEmail: fd.get('nominatorEmail'),
+          division:       currentDivision,
+          divisionName:   divInfo.name,
+          submittedAt:    firebase.firestore.FieldValue.serverTimestamp(),
+          photoUrl:       '',
+          photoPath:      ''
+        };
+
+        if (selectedFile) {
+          submitBtn.textContent = 'OPTIMIZING PHOTO...';
+          var optimized = await optimizeImage(selectedFile, 1200, 0.75);
+          submitBtn.textContent = 'UPLOADING PHOTO...';
+          var ts = Date.now();
+          var ext = optimized === selectedFile
+            ? selectedFile.name.split('.').pop().toLowerCase()
+            : 'jpg';
+          var safeName = (data.nomineeName || 'nominee').replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_');
+          var path = 'nominations/division-' + currentDivision + '/' + ts + '_' + safeName + '.' + ext;
+          var ref = storage.ref(path);
+          var snap = await ref.put(optimized);
+          data.photoUrl  = await snap.ref.getDownloadURL();
+          data.photoPath = path;
+        }
+
+        submitBtn.textContent = 'SAVING...';
+        await db.collection('nominations').add(data);
+
+        form.classList.add('hidden');
+        successDiv.classList.remove('hidden');
+
+      } catch (err) {
+        console.error('Submission error:', err);
+        statusDiv.textContent = 'Error: ' + err.message + '. Please try again.';
+        statusDiv.className = 'text-center py-4 rounded bg-red-900/50 text-red-300 border border-red-700';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SUBMIT NOMINATION';
+      }
+    });
+
+    document.getElementById('nominate-another').addEventListener('click', function() {
+      form.reset();
+      clearFile();
+      form.classList.remove('hidden');
+      successDiv.classList.add('hidden');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'SUBMIT NOMINATION';
+      document.getElementById('nominate').scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>
