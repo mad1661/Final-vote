@@ -53,6 +53,28 @@
       * {
         box-sizing: border-box;
       }
+      :root.in-frame .head {
+        margin-bottom: 0.5rem;
+      }
+      :root.in-frame .logo {
+        max-height: 72px;
+      }
+      :root.in-frame .head h1 {
+        font-size: 1.1rem;
+      }
+      :root.in-frame .div-badge {
+        height: 34px;
+      }
+      :root.in-frame .photo-strip img {
+        width: clamp(36px, 6vw, 46px);
+        height: clamp(36px, 6vw, 46px);
+      }
+      :root.in-frame .rule {
+        margin: 0.6rem 0;
+      }
+      :root.in-frame .widget {
+        padding-top: 0.8rem;
+      }
       body {
         margin: 0;
         font-family: var(--font);
@@ -63,7 +85,7 @@
         min-height: 100vh;
       }
       .widget {
-        padding: 1.2rem clamp(0.9rem, 3vw, 2.2rem) 5.2rem;
+        padding: 1.2rem clamp(0.9rem, 3vw, 2.2rem) 1.2rem;
         max-width: 100%;
         margin: 0 auto;
       }
@@ -352,35 +374,32 @@
         padding: 0.55rem 1rem;
         border-radius: var(--r-sm);
       }
-      /* Submit bar */
+      /* Submit bar — sticky in the page flow so it can never be clipped
+         by an iframe and is always reachable at the bottom of the view */
       .submit-bar {
-        position: fixed;
-        left: 0;
-        right: 0;
+        position: sticky;
         bottom: 0;
         display: flex;
         justify-content: center;
-        padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
-        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.75) 40%);
-        pointer-events: none;
-      }
-      :root[data-theme="light"] .submit-bar {
-        background: linear-gradient(180deg, transparent, rgba(244, 243, 240, 0.9) 40%);
+        padding: 0.7rem 0 calc(0.7rem + env(safe-area-inset-bottom));
+        margin-top: 0.8rem;
+        background: linear-gradient(180deg, transparent, var(--bg) 45%);
+        z-index: 30;
       }
       .submit-btn {
-        pointer-events: auto;
+        width: min(92%, 420px);
         font-family: var(--font);
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.12em;
-        font-size: 0.85rem;
-        padding: 0.8rem 2.2rem;
+        font-size: 1rem;
+        padding: 1rem 1.5rem;
         border: none;
         border-radius: 999px;
         background: linear-gradient(135deg, var(--accent-2), var(--accent));
         color: #fff;
         cursor: pointer;
-        box-shadow: 0 6px 24px var(--accent-glow);
+        box-shadow: 0 6px 24px var(--accent-glow), 0 0 0 2px rgba(255, 255, 255, 0.15) inset;
         transition: filter 0.15s ease, opacity 0.15s ease;
       }
       .submit-btn:hover:not(:disabled) {
