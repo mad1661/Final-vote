@@ -1,14 +1,17 @@
-# Final Vote
+# Legend Vote
 
-A voting web app backed by Firebase (project: `voting-10a21`).
+Per-division voting for NHRA legends, backed by Firebase (project:
+`voting-10a21`). Completely separate from the nomination site — this deploys
+to its own Hosting site and each Division 1–7 website embeds its own voting
+widget.
 
-The final round: every submitted name in Firestore is listed as a candidate
-and each visitor casts one vote. Tallies update live for everyone viewing
-the page. An admin page lets you bulk-load names (paste a list or upload an
-Excel/CSV file), see counts, and remove entries.
+## Pages
 
-**The vote page never modifies existing name documents.** It only reads the
-names collection. Vote tallies are stored in a separate `votes` collection.
+- `/` — division picker; `/?div=3` — full-page vote for Division 3
+- `/embed.html?div=3` — compact widget for embedding in division sites
+- `/admin.html` — admin console (Google sign-in): bulk add names by pasting
+  or uploading Excel/CSV, live results table across all divisions, remove
+  names, and copy-paste embed codes for each division
 
 ## Setup
 
@@ -17,57 +20,26 @@ npm install
 npm run dev
 ```
 
-Open the printed local URL — the submitted names appear automatically — and
-vote (open a second tab to see live sync). The admin page is at
-`/admin.html`.
-
-## Structure
-
-- `src/firebase.js` — initializes the Firebase app, Firestore (`db`), and Analytics
-- `src/names.js` — reads names, bulk-adds, removes, and records votes
-- `src/main.js` — public vote page: name list, add-name form, voting
-- `src/admin.js` — admin page: Google sign-in, bulk add (paste/Excel/CSV), manage names
-- `index.html` / `admin.html` — page shells and styles (Vite entries)
-
-## Admin page
-
-Visit `/admin.html` and sign in with Google. From there you can:
-
-- **Bulk add names** — paste a list (one per line, commas also fine), or
-  upload an `.xlsx` / `.xls` / `.csv` file; every filled-in cell is treated
-  as a name. Duplicates merge automatically instead of creating copies.
-- **See live vote counts** per name.
-- **Remove** a name (and its votes).
-
-One-time setup in the Firebase console: enable the **Google** provider under
-[Authentication → Sign-in method](https://console.firebase.google.com/project/voting-10a21/authentication/providers).
-
 ## How data is stored
 
-Submitted names live in the `names` collection — whatever documents are
-already there are displayed as-is. The app looks for the name text in a
-`name` / `value` / `text` / `title` field (falling back to the document id),
-so it works with the existing document shape.
+- `names/{slug}` — one doc per candidate, shared by all divisions. The
+  reader tolerates any doc shape (`name`/`value`/`text`/`title` field or the
+  doc id itself). Bulk adds are chunked batches; slug keying merges
+  duplicates.
+- `votes/d{division}_{nameId}` — one tally doc per name **per division**:
+  `{ count, division, nameId, updatedAt }`. Votes are atomic +1 increments.
+  Existing name docs are never modified by voting.
 
-If your names live in a differently-named collection, change the
-`NAMES_COLLECTION` constant at the top of `src/names.js`.
+A localStorage flag limits each browser to one vote per division.
 
-Votes are kept separate so existing data is never touched:
+## Admin setup (one-time, Firebase console)
 
-```
-votes/{nameDocId}: { count: number, updatedAt }
-```
-
-Each vote atomically increments `count`. The UI subscribes to both
-collections with `onSnapshot` and merges them for live, sorted results. A
-localStorage flag limits each browser to one vote.
-
-## Firestore security rules
-
-Open
-[Firestore rules](https://console.firebase.google.com/project/voting-10a21/firestore/rules),
-paste the rules below, and **replace `YOUR-EMAIL@gmail.com` with the Google
-account email you'll use on the admin page**:
+1. Enable the **Google** provider under
+   [Authentication → Sign-in method](https://console.firebase.google.com/project/voting-10a21/authentication/providers).
+2. Paste the rules below into
+   [Firestore rules](https://console.firebase.google.com/project/voting-10a21/firestore/rules),
+   replacing `YOUR-EMAIL@gmail.com` with the Google account you'll use on
+   the admin page:
 
 ```
 rules_version = '2';
@@ -79,14 +51,14 @@ service cloud.firestore {
     }
     match /names/{nameId} {
       allow read: if true;
-      allow create: if isAdmin()
-                    || (request.resource.data.name is string
-                        && request.resource.data.name.size() <= 80);
-      allow update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
-    match /votes/{nameId} {
+    match /votes/{voteId} {
       allow read: if true;
-      allow create: if request.resource.data.count == 1;
+      allow create: if request.resource.data.count == 1
+                    && request.resource.data.division is int
+                    && request.resource.data.division >= 1
+                    && request.resource.data.division <= 7;
       allow update: if request.resource.data.diff(resource.data)
                        .affectedKeys().hasOnly(['count', 'updatedAt'])
                     && request.resource.data.count == resource.data.count + 1;
@@ -96,28 +68,36 @@ service cloud.firestore {
 }
 ```
 
-Visitors can read names and cast +1 votes; only the admin account can
-bulk-manage names or remove anything.
+Visitors can read and cast +1 votes; only the admin can manage names.
 
-## Build
+## Embedding in division sites
 
-```bash
-npm run build
+The admin page generates copy-paste snippets. They look like:
+
+```html
+<iframe
+  src="https://legendvote-final.web.app/embed.html?div=3"
+  title="Legend Vote — Division 3"
+  style="width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13"
+></iframe>
 ```
 
-## Deploying next to the existing site (without touching it)
+Change `div=` to the division number (1–7).
 
-The voting app deploys to its **own Firebase Hosting site**
-(`legendvote-final`) inside the same project, so the existing sites
-(`legendvote`, etc.) are never modified or overwritten.
+## Deploy
+
+Deploys to the dedicated Hosting site `legendvote-final` — the nomination
+site and other Hosting sites in the project are never touched.
 
 ```bash
-npm install
 npm run build
 firebase deploy --only hosting:vote
 ```
 
-- Vote page: **https://legendvote-final.web.app**
-- Admin page: **https://legendvote-final.web.app/admin.html**
+- Vote site: **https://legendvote-final.web.app**
+- Admin: **https://legendvote-final.web.app/admin.html**
 
-Finally, add a link (e.g. "Vote") from your existing site to the vote URL.
+## Reference
+
+`site/` contains a copy of the NHRA Division Office (nomination) app for
+design reference — it is not part of this deploy.

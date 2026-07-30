@@ -10,10 +10,10 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 
-// Collection that already holds the submitted names. The app only reads it
-// (and appends new docs via the add-name form) — it never modifies existing
-// documents. Vote tallies live in the separate `votes` collection, one doc
-// per name keyed by the name doc's id.
+export const DIVISIONS = [1, 2, 3, 4, 5, 6, 7];
+
+// Candidate names are shared across divisions; each division has its own
+// tally per name, stored in `votes` as doc id `d{division}_{nameId}`.
 export const NAMES_COLLECTION = "names";
 
 const NAMES = collection(db, NAMES_COLLECTION);
@@ -80,34 +80,42 @@ export async function addNames(labels) {
   return entries.length;
 }
 
-// Remove a candidate and its tally (admin).
+// Remove a candidate and its tallies in every division (admin).
 export async function removeName(id) {
   await deleteDoc(doc(NAMES, id));
-  await deleteDoc(doc(VOTES, id));
+  const batch = writeBatch(db);
+  for (const division of DIVISIONS) {
+    batch.delete(doc(VOTES, `d${division}_${id}`));
+  }
+  await batch.commit();
 }
 
-export async function voteFor(id) {
+export async function voteFor(id, division) {
   await setDoc(
-    doc(VOTES, id),
-    { count: increment(1), updatedAt: serverTimestamp() },
+    doc(VOTES, `d${division}_${id}`),
+    {
+      count: increment(1),
+      division,
+      nameId: id,
+      updatedAt: serverTimestamp(),
+    },
     { merge: true }
   );
 }
 
-// Calls `callback` with [{ id, name, votes }] sorted by votes (then name),
-// immediately and on every change to either collection.
-export function watchNames(callback) {
+// Calls `callback` with { names, votes } on every change to either
+// collection:
+//   names: [{ id, name }] sorted alphabetically
+//   votes: Map of nameId -> { [division]: count }
+export function watchBoard(callback) {
   let names = new Map();
   let votes = new Map();
 
   const emit = () => {
-    const out = [...names.entries()].map(([id, name]) => ({
-      id,
-      name,
-      votes: votes.get(id) ?? 0,
-    }));
-    out.sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name));
-    callback(out);
+    const list = [...names.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    callback({ names: list, votes });
   };
 
   const stopNames = onSnapshot(NAMES, (snapshot) => {
@@ -121,7 +129,14 @@ export function watchNames(callback) {
   const stopVotes = onSnapshot(VOTES, (snapshot) => {
     votes = new Map();
     snapshot.forEach((docSnap) => {
-      votes.set(docSnap.id, docSnap.data().count ?? 0);
+      const data = docSnap.data();
+      const match = /^d(\d+)_(.+)$/.exec(docSnap.id);
+      const division = data.division ?? (match ? Number(match[1]) : null);
+      const nameId = data.nameId ?? (match ? match[2] : null);
+      if (!division || !nameId) return;
+      const perName = votes.get(nameId) ?? {};
+      perName[division] = data.count ?? 0;
+      votes.set(nameId, perName);
     });
     emit();
   });
@@ -132,16 +147,28 @@ export function watchNames(callback) {
   };
 }
 
-const VOTED_KEY = "voted:final-vote";
-
-export function hasVoted() {
-  return localStorage.getItem(VOTED_KEY) !== null;
+export function divisionCount(votes, nameId, division) {
+  return votes.get(nameId)?.[division] ?? 0;
 }
 
-export function markVoted(id) {
-  localStorage.setItem(VOTED_KEY, id);
+export function totalCount(votes, nameId) {
+  const perName = votes.get(nameId);
+  if (!perName) return 0;
+  return Object.values(perName).reduce((sum, n) => sum + n, 0);
 }
 
-export function votedFor() {
-  return localStorage.getItem(VOTED_KEY);
+function votedKey(division) {
+  return `voted:final-vote:d${division}`;
+}
+
+export function hasVoted(division) {
+  return localStorage.getItem(votedKey(division)) !== null;
+}
+
+export function markVoted(division, id) {
+  localStorage.setItem(votedKey(division), id);
+}
+
+export function votedFor(division) {
+  return localStorage.getItem(votedKey(division));
 }

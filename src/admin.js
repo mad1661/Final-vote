@@ -7,7 +7,14 @@ import {
 } from "firebase/auth";
 import * as XLSX from "xlsx";
 import { app } from "./firebase.js";
-import { addNames, removeName, watchNames } from "./names.js";
+import {
+  DIVISIONS,
+  addNames,
+  divisionCount,
+  removeName,
+  totalCount,
+  watchBoard,
+} from "./names.js";
 
 const auth = getAuth(app);
 
@@ -18,31 +25,65 @@ const signedInAs = document.getElementById("signed-in-as");
 const bulkInput = document.getElementById("bulk-input");
 const bulkStatus = document.getElementById("bulk-status");
 const fileInput = document.getElementById("file-input");
+const headRow = document.getElementById("head-row");
 const namesBody = document.getElementById("names-body");
 const countLine = document.getElementById("count-line");
+const snippetsEl = document.getElementById("snippets");
 
-let names = [];
+let board = { names: [], votes: new Map() };
 let stopWatching = null;
 
+function renderHead() {
+  headRow.replaceChildren(
+    ...["Name", ...DIVISIONS.map((d) => `D${d}`), "Total", ""].map(
+      (label, i) => {
+        const th = document.createElement("th");
+        th.textContent = label;
+        if (i > 0 && i <= DIVISIONS.length + 1) th.className = "num";
+        return th;
+      }
+    )
+  );
+}
+
 function renderNames() {
-  const totalVotes = names.reduce((sum, n) => sum + n.votes, 0);
-  countLine.textContent = `${names.length} name${names.length === 1 ? "" : "s"}, ${totalVotes} vote${totalVotes === 1 ? "" : "s"} total.`;
+  const rows = board.names
+    .map((entry) => ({
+      ...entry,
+      total: totalCount(board.votes, entry.id),
+    }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
+  countLine.textContent = `${rows.length} name${rows.length === 1 ? "" : "s"}, ${grandTotal} vote${grandTotal === 1 ? "" : "s"} across all divisions.`;
+
   namesBody.replaceChildren(
-    ...names.map((entry) => {
+    ...rows.map((entry) => {
       const tr = document.createElement("tr");
 
       const nameTd = document.createElement("td");
       nameTd.textContent = entry.name;
+      tr.append(nameTd);
 
-      const votesTd = document.createElement("td");
-      votesTd.textContent = String(entry.votes);
+      for (const d of DIVISIONS) {
+        const td = document.createElement("td");
+        td.className = "num";
+        const n = divisionCount(board.votes, entry.id, d);
+        td.textContent = n ? String(n) : "·";
+        tr.append(td);
+      }
+
+      const totalTd = document.createElement("td");
+      totalTd.className = "num total";
+      totalTd.textContent = String(entry.total);
+      tr.append(totalTd);
 
       const actionTd = document.createElement("td");
       const del = document.createElement("button");
       del.className = "btn danger";
       del.textContent = "Remove";
       del.addEventListener("click", async () => {
-        if (!confirm(`Remove "${entry.name}" and its votes?`)) return;
+        if (!confirm(`Remove "${entry.name}" and its votes in all divisions?`))
+          return;
         try {
           await removeName(entry.id);
         } catch (err) {
@@ -51,9 +92,39 @@ function renderNames() {
         }
       });
       actionTd.append(del);
+      tr.append(actionTd);
 
-      tr.append(nameTd, votesTd, actionTd);
       return tr;
+    })
+  );
+}
+
+function renderSnippets() {
+  const base = `${location.origin}/embed.html`;
+  snippetsEl.replaceChildren(
+    ...DIVISIONS.map((d) => {
+      const row = document.createElement("div");
+      row.className = "snippet";
+
+      const code = document.createElement("code");
+      const html = `<iframe src="${base}?div=${d}" title="Legend Vote — Division ${d}" style="width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13"></iframe>`;
+      code.textContent = html;
+
+      const copy = document.createElement("button");
+      copy.className = "btn secondary";
+      copy.textContent = `Copy D${d}`;
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(html);
+          copy.textContent = "Copied!";
+        } catch {
+          copy.textContent = "Select & copy";
+        }
+        setTimeout(() => (copy.textContent = `Copy D${d}`), 1500);
+      });
+
+      row.append(code, copy);
+      return row;
     })
   );
 }
@@ -127,9 +198,11 @@ onAuthStateChanged(auth, (user) => {
     signedInAs.textContent = `Signed in as ${user.email}`;
     authSection.classList.add("hidden");
     adminUi.classList.remove("hidden");
+    renderHead();
+    renderSnippets();
     stopWatching?.();
-    stopWatching = watchNames((next) => {
-      names = next;
+    stopWatching = watchBoard((next) => {
+      board = next;
       renderNames();
     });
   } else {
@@ -138,6 +211,6 @@ onAuthStateChanged(auth, (user) => {
     adminUi.classList.add("hidden");
     stopWatching?.();
     stopWatching = null;
-    names = [];
+    board = { names: [], votes: new Map() };
   }
 });
