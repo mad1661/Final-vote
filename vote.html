@@ -63,8 +63,8 @@
         min-height: 100vh;
       }
       .widget {
-        padding: 1.2rem 1.1rem 5.2rem;
-        max-width: 44rem;
+        padding: 1.2rem clamp(0.9rem, 3vw, 2.2rem) 5.2rem;
+        max-width: 100%;
         margin: 0 auto;
       }
       /* Header */
@@ -106,6 +106,44 @@
         width: auto;
         filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.5));
         display: none;
+      }
+      .photo-strip {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0.7rem 0 0.1rem;
+        min-height: 0;
+      }
+      .photo-strip img {
+        width: clamp(44px, 7vw, 60px);
+        height: clamp(44px, 7vw, 60px);
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--bg);
+        box-shadow: 0 0 0 2px var(--accent), 0 6px 16px rgba(0, 0, 0, 0.55);
+        margin-left: -14px;
+        transition: transform 0.15s ease;
+      }
+      .photo-strip img:first-child {
+        margin-left: 0;
+      }
+      .photo-strip img:nth-child(odd) {
+        transform: rotate(-4deg);
+      }
+      .photo-strip img:nth-child(even) {
+        transform: rotate(4deg) translateY(3px);
+      }
+      .photo-strip img:hover {
+        transform: scale(1.18);
+        z-index: 2;
+        position: relative;
+      }
+      .photo-strip .more {
+        margin-left: 0.6rem;
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+        color: var(--text-4);
       }
       .rule {
         height: 2px;
@@ -419,6 +457,7 @@
           <img class="div-badge" id="div-badge" alt="" />
           <span id="div-line">&nbsp;</span>
         </div>
+        <div class="photo-strip" id="photo-strip"></div>
       </div>
       <div class="rule"></div>
       <p id="status">Loading…</p>

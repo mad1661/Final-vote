@@ -70,6 +70,7 @@ const submitBar = document.getElementById("submit-bar");
 const submitBtn = document.getElementById("submit-btn");
 const overlay = document.getElementById("overlay");
 const foot = document.getElementById("foot");
+const photoStrip = document.getElementById("photo-strip");
 foot.textContent = `Live results · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
 
 let board = { byDivision: {}, votes: new Map() };
@@ -160,6 +161,36 @@ overlay.addEventListener("click", (e) => {
   if (e.target === overlay) overlay.classList.add("hidden");
 });
 
+function renderPhotoStrip(rows) {
+  const photos = [];
+  for (const entry of rows) {
+    for (const url of entry.photos?.length ? entry.photos : entry.photoUrl ? [entry.photoUrl] : []) {
+      if (!photos.includes(url)) photos.push(url);
+      if (photos.length >= 9) break;
+    }
+    if (photos.length >= 9) break;
+  }
+  const totalPhotos = rows.reduce(
+    (sum, r) => sum + (r.photos?.length ?? (r.photoUrl ? 1 : 0)),
+    0
+  );
+  photoStrip.replaceChildren(
+    ...photos.map((url) => {
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "";
+      img.loading = "lazy";
+      return img;
+    })
+  );
+  if (totalPhotos > photos.length) {
+    const more = document.createElement("span");
+    more.className = "more";
+    more.textContent = `+${totalPhotos - photos.length} more`;
+    photoStrip.append(more);
+  }
+}
+
 function render() {
   const voted = submitted || (DEMO ? false : hasVoted(division));
   const mine = new Set(DEMO && submitted ? picks : votedFor(division));
@@ -173,6 +204,7 @@ function render() {
     ? rows.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
     : rows.sort((a, b) => a.name.localeCompare(b.name));
   const total = rows.reduce((sum, r) => sum + r.count, 0);
+  renderPhotoStrip(rows);
 
   if (rows.length === 0) {
     const li = document.createElement("li");

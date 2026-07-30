@@ -375,6 +375,37 @@
       .hidden {
         display: none !important;
       }
+      .dupe-group {
+        background: var(--surface);
+        border-radius: var(--r-md);
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 0.7rem;
+        box-shadow: inset 0 0 0 1px rgba(227, 6, 19, 0.25);
+      }
+      .dupe-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.35rem 0;
+      }
+      .dupe-row .who {
+        flex: 1;
+        min-width: 0;
+      }
+      .dupe-row .who .nm {
+        font-weight: 600;
+      }
+      .dupe-row .who .extra {
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-4);
+      }
+      .dupe-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.4rem;
+      }
       #signed-in-as {
         font-size: 0.85rem;
         color: var(--text-3);
@@ -425,6 +456,17 @@
           <div class="stat"><b id="stat-noms">–</b><span>Nominations</span></div>
           <div class="stat"><b id="stat-votes">–</b><span>Votes cast</span></div>
         </div>
+
+        <section id="dupes-section" class="hidden">
+          <h2>Possible duplicates — review &amp; merge</h2>
+          <p class="hint">
+            These names look like they might be the same person. In each
+            group, click <b>Keep this one</b> on the correct name — the
+            others' votes and nominations move onto it. If they're actually
+            different people, click <b>Not duplicates</b>.
+          </p>
+          <div id="dupes-list"></div>
+        </section>
 
         <section>
           <h2>Candidates &amp; results</h2>

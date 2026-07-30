@@ -95,6 +95,155 @@ function unionCandidates() {
   return union;
 }
 
+/* ---------- Duplicate detection ---------- */
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function looksSimilar(a, b) {
+  const ta = a.id.split("-").filter(Boolean);
+  const tb = b.id.split("-").filter(Boolean);
+  if (levenshtein(a.id, b.id) <= 2) return true;
+  // one name contained in the other ("don-garlits" in "big-daddy-don-garlits")
+  const setA = new Set(ta), setB = new Set(tb);
+  if (ta.every((t) => setB.has(t)) || tb.every((t) => setA.has(t))) return true;
+  // same last name, similar first name
+  const lastA = ta[ta.length - 1], lastB = tb[tb.length - 1];
+  if (lastA && lastA === lastB && ta[0] && tb[0]) {
+    if (ta[0][0] === tb[0][0] || levenshtein(ta[0], tb[0]) <= 1) return true;
+  }
+  return false;
+}
+
+const DISMISSED_KEY = "dupes-dismissed";
+function dismissedSet() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? "[]"));
+  } catch {
+    return new Set();
+  }
+}
+function groupKey(group) {
+  return group.map((e) => e.id).sort().join("|");
+}
+
+function findDuplicateGroups(entries) {
+  const parent = new Map(entries.map((e) => [e.id, e.id]));
+  const find = (x) => {
+    while (parent.get(x) !== x) {
+      parent.set(x, parent.get(parent.get(x)));
+      x = parent.get(x);
+    }
+    return x;
+  };
+  for (let i = 0; i < entries.length; i++) {
+    for (let j = i + 1; j < entries.length; j++) {
+      if (looksSimilar(entries[i], entries[j])) {
+        parent.set(find(entries[i].id), find(entries[j].id));
+      }
+    }
+  }
+  const groups = new Map();
+  for (const e of entries) {
+    const root = find(e.id);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(e);
+  }
+  const dismissed = dismissedSet();
+  return [...groups.values()].filter(
+    (g) => g.length > 1 && !dismissed.has(groupKey(g))
+  );
+}
+
+function renderDupes() {
+  const section = document.getElementById("dupes-section");
+  const list = document.getElementById("dupes-list");
+  const union = unionCandidates();
+  const groups = findDuplicateGroups([...union.values()]);
+  section.classList.toggle("hidden", groups.length === 0);
+  list.replaceChildren(
+    ...groups.map((group) => {
+      const box = document.createElement("div");
+      box.className = "dupe-group";
+      for (const entry of group) {
+        const row = document.createElement("div");
+        row.className = "dupe-row";
+        const thumb = document.createElement("span");
+        thumb.className = "thumb";
+        thumb.style.cssText =
+          "width:2.2rem;height:2.2rem;border-radius:9px;overflow:hidden;background:var(--surface-3);display:grid;place-items:center;flex-shrink:0;font-size:0.7rem;font-weight:700;color:var(--text-3)";
+        if (entry.photoUrl) {
+          const img = document.createElement("img");
+          img.src = entry.photoUrl;
+          img.style.cssText = "width:100%;height:100%;object-fit:cover";
+          thumb.append(img);
+        } else {
+          thumb.textContent = initials(entry.name);
+        }
+        const who = document.createElement("div");
+        who.className = "who";
+        const nm = document.createElement("div");
+        nm.className = "nm";
+        nm.textContent = entry.name;
+        const extra = document.createElement("div");
+        extra.className = "extra";
+        extra.textContent = [
+          entry.memberships.map((d) => `D${d}`).join(" "),
+          `${entry.nominationDocIds.length} nomination${entry.nominationDocIds.length === 1 ? "" : "s"}`,
+          `${totalCount(board.votes, entry.id)} votes`,
+        ].join(" · ");
+        who.append(nm, extra);
+        const keep = document.createElement("button");
+        keep.className = "btn small";
+        keep.textContent = "Keep this one";
+        keep.addEventListener("click", async () => {
+          const others = group.filter((e) => e.id !== entry.id);
+          if (!confirm(`Keep "${entry.name}" and merge ${others.map((o) => `"${o.name}"`).join(", ")} into it?`)) return;
+          try {
+            await mergeCandidates(entry, others, board.votes);
+          } catch (err) {
+            console.error("Merge failed:", err);
+            alert("Merge failed — check your admin access and try again.");
+          }
+        });
+        row.append(thumb, who, keep);
+        box.append(row);
+      }
+      const actions = document.createElement("div");
+      actions.className = "dupe-actions";
+      const dismiss = document.createElement("button");
+      dismiss.className = "btn secondary small";
+      dismiss.textContent = "Not duplicates";
+      dismiss.addEventListener("click", () => {
+        const dismissed = dismissedSet();
+        dismissed.add(groupKey(group));
+        localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed]));
+        renderDupes();
+      });
+      actions.append(dismiss);
+      box.append(actions);
+      return box;
+    })
+  );
+}
+
 function renderHead() {
   headRow.replaceChildren(
     ...["", "Candidate", ...DIVISIONS.map((d) => `D${d}`), "Total", ""].map(
@@ -337,7 +486,7 @@ function snippetRow(html, label) {
 function renderSnippets() {
   const base = `${location.origin}/embed.html`;
   const style =
-    "width:100%;max-width:560px;height:760px;border:0;border-radius:16px;background:#000";
+    "width:100%;height:800px;border:0;border-radius:16px;background:#000";
 
   const universalNote = document.createElement("p");
   universalNote.className = "hint";
@@ -446,6 +595,7 @@ onAuthStateChanged(auth, (user) => {
     stopWatching = watchBoard((next) => {
       board = next;
       renderNames();
+      renderDupes();
     });
   } else {
     status.textContent = "Sign in to manage the vote.";
