@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Legend Vote</title>
+    <link rel="icon" type="image/png" href="/nhra-logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,10 +18,9 @@
         --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
         --font-mono: "JetBrains Mono", ui-monospace, monospace;
         --bg: #0d0d13;
-        --bg-2: #111117;
         --surface: rgba(255, 255, 255, 0.05);
         --surface-2: rgba(255, 255, 255, 0.08);
-        --border-s: rgba(255, 255, 255, 0.08);
+        --surface-3: rgba(255, 255, 255, 0.11);
         --accent: #dc2626;
         --accent-2: #ef4444;
         --accent-3: #fca5a5;
@@ -32,6 +32,22 @@
         --r-lg: 20px;
         --r-md: 14px;
         --r-sm: 10px;
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+          0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f4f4f7;
+        --surface: rgba(20, 20, 30, 0.04);
+        --surface-2: rgba(20, 20, 30, 0.07);
+        --surface-3: rgba(20, 20, 30, 0.1);
+        --accent-glow: rgba(220, 38, 38, 0.22);
+        --text: #17171c;
+        --text-2: #3c3c46;
+        --text-3: #5d5d68;
+        --text-4: #8c8c96;
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset,
+          0 8px 24px rgba(20, 20, 30, 0.08);
       }
       * {
         box-sizing: border-box;
@@ -39,90 +55,147 @@
       body {
         margin: 0;
         font-family: var(--font);
-        background: var(--bg);
+        background:
+          radial-gradient(560px 260px at 18% -8%, var(--accent-glow), transparent 65%),
+          var(--bg);
         color: var(--text);
+        min-height: 100vh;
       }
       .widget {
-        padding: 1.1rem 1.1rem 1.3rem;
+        padding: 1.15rem 1.15rem 1rem;
         max-width: 34rem;
         margin: 0 auto;
       }
       .head {
         display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin-bottom: 0.35rem;
+        align-items: center;
+        gap: 0.7rem;
+        margin-bottom: 0.9rem;
+      }
+      .logo {
+        height: 34px;
+        width: auto;
+        flex-shrink: 0;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+      }
+      .head-text {
+        flex: 1;
+        min-width: 0;
       }
       .title {
         font-family: var(--font-display);
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-size: 1.15rem;
+        letter-spacing: 0.06em;
+        font-size: 1.2rem;
+        line-height: 1.1;
+        white-space: nowrap;
       }
       .title em {
         font-style: normal;
         color: var(--accent-2);
       }
-      .div-tag {
+      .sub {
         font-family: var(--font-mono);
-        font-size: 0.7rem;
-        letter-spacing: 0.12em;
-        color: var(--accent-3);
-        background: rgba(220, 38, 38, 0.12);
-        padding: 0.25rem 0.6rem;
-        border-radius: 999px;
+        font-size: 0.62rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--text-4);
+        margin-top: 0.15rem;
+      }
+      .div-chip {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.9rem;
+        letter-spacing: 0.06em;
+        color: #fff;
+        background: linear-gradient(135deg, var(--accent), #a31515);
+        padding: 0.45rem 0.85rem;
+        border-radius: var(--r-sm);
+        box-shadow: 0 0 24px var(--accent-glow);
         white-space: nowrap;
+        text-transform: uppercase;
+      }
+      .rule {
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), transparent 70%);
+        margin-bottom: 0.8rem;
       }
       #status {
         color: var(--text-3);
         font-size: 0.85rem;
         min-height: 1.2em;
-        margin: 0 0 0.75rem;
+        margin: 0 0 0.8rem;
+      }
+      #status b {
+        color: var(--accent-3);
+        font-weight: 600;
       }
       #list {
         list-style: none;
         margin: 0;
         padding: 0;
         display: grid;
-        gap: 0.45rem;
+        gap: 0.5rem;
       }
       .row {
         position: relative;
         display: flex;
         align-items: center;
-        gap: 0.7rem;
+        gap: 0.75rem;
         background: var(--surface);
         border-radius: var(--r-md);
-        padding: 0.6rem 0.75rem;
-        transition: background 0.15s ease;
+        padding: 0.7rem 0.85rem;
+        box-shadow: var(--shadow-card);
+        transition: background 0.15s ease, transform 0.15s ease;
         overflow: hidden;
       }
       .row:hover {
         background: var(--surface-2);
+        transform: translateY(-1px);
       }
       .row.chosen {
-        box-shadow: inset 3px 0 0 var(--accent), 0 0 20px var(--accent-glow);
         background: var(--surface-2);
+        box-shadow: inset 3px 0 0 var(--accent), 0 0 24px var(--accent-glow),
+          var(--shadow-card);
       }
       .fill {
         position: absolute;
         inset: 0;
+        width: 0;
         background: linear-gradient(
           90deg,
-          rgba(220, 38, 38, 0.18),
-          rgba(220, 38, 38, 0.04)
+          rgba(220, 38, 38, 0.22),
+          rgba(220, 38, 38, 0.02)
         );
-        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+        transition: width 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
         pointer-events: none;
       }
+      .rank {
+        position: relative;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--text-4);
+        background: var(--surface-2);
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      .row.r1 .rank { background: #f5c542; color: #211a00; }
+      .row.r2 .rank { background: #c9d1e0; color: #1c2029; }
+      .row.r3 .rank { background: #d08a4e; color: #241300; }
       .name {
         position: relative;
         flex: 1;
         min-width: 0;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.98rem;
+        letter-spacing: 0.01em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -130,27 +203,35 @@
       .count {
         position: relative;
         font-family: var(--font-mono);
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         color: var(--text-3);
         white-space: nowrap;
+        text-align: right;
+      }
+      .count b {
+        display: block;
+        font-size: 0.9rem;
+        color: var(--text-2);
+        font-weight: 500;
       }
       .vote-btn {
         position: relative;
         font-family: var(--font-display);
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
         font-size: 0.72rem;
-        padding: 0.45rem 0.85rem;
+        padding: 0.55rem 1rem;
         border: none;
         border-radius: var(--r-sm);
-        background: var(--accent);
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
         color: #fff;
         cursor: pointer;
-        transition: box-shadow 0.15s ease, background 0.15s ease;
+        transition: box-shadow 0.15s ease, filter 0.15s ease;
+        flex-shrink: 0;
       }
       .vote-btn:hover:not(:disabled) {
-        background: var(--accent-2);
+        filter: brightness(1.12);
         box-shadow: 0 0 20px var(--accent-glow);
       }
       .vote-btn:disabled {
@@ -158,19 +239,43 @@
         color: var(--text-4);
         cursor: default;
       }
+      .row.chosen .vote-btn {
+        background: var(--accent);
+        color: #fff;
+      }
       .empty {
         color: var(--text-3);
         text-align: center;
-        padding: 1.5rem 0;
+        padding: 1.8rem 0;
         font-size: 0.9rem;
       }
+      .choose {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+      .choose a {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        font-size: 0.8rem;
+        text-decoration: none;
+        color: #fff;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        padding: 0.55rem 0.95rem;
+        border-radius: var(--r-sm);
+      }
+      .choose a:hover {
+        filter: brightness(1.12);
+        box-shadow: 0 0 20px var(--accent-glow);
+      }
       .foot {
-        margin-top: 0.8rem;
-        font-size: 0.7rem;
+        margin-top: 0.9rem;
+        font-size: 0.62rem;
         color: var(--text-4);
         text-align: center;
         font-family: var(--font-mono);
-        letter-spacing: 0.08em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
       }
     </style>
@@ -178,9 +283,14 @@
   <body>
     <div class="widget">
       <div class="head">
-        <span class="title">Legend <em>Vote</em></span>
-        <span class="div-tag" id="div-tag">Division —</span>
+        <img class="logo" src="/nhra-logo.png" alt="NHRA" />
+        <div class="head-text">
+          <div class="title">Legend <em>Vote</em></div>
+          <div class="sub">Championship Drag Racing</div>
+        </div>
+        <span class="div-chip" id="div-tag">—</span>
       </div>
+      <div class="rule"></div>
       <p id="status">Loading…</p>
       <ul id="list"></ul>
       <div class="foot" id="foot">Live results · One vote per person</div>

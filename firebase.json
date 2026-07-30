@@ -2,6 +2,7 @@
   "hosting": {
     "target": "vote",
     "public": "dist",
+    "cleanUrls": true,
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "headers": [
       {
@@ -13,12 +14,6 @@
         "headers": [
           { "key": "Cache-Control", "value": "max-age=31536000, immutable" }
         ]
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
       }
     ]
   }

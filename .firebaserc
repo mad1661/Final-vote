@@ -5,7 +5,7 @@
   "targets": {
     "voting-10a21": {
       "hosting": {
-        "vote": ["legendvote-final"]
+        "vote": ["voting-10a21"]
       }
     }
   }

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp site/index.html dist/index.html && cp site/nhra-logo.png dist/nhra-logo.png",
     "preview": "vite preview"
   },
   "dependencies": {
