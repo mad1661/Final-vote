@@ -64,13 +64,17 @@ service cloud.firestore {
     }
     match /votes/{voteId} {
       allow read: if true;
-      allow create: if request.resource.data.count == 1
-                    && request.resource.data.division is int
-                    && request.resource.data.division >= 1
-                    && request.resource.data.division <= 7;
-      allow update: if request.resource.data.diff(resource.data)
-                       .affectedKeys().hasOnly(['count', 'updatedAt'])
-                    && request.resource.data.count == resource.data.count + 1;
+      allow create: if isAdmin()
+                    || (request.resource.data.count >= 1
+                        && request.resource.data.count <= 5
+                        && request.resource.data.division is int
+                        && request.resource.data.division >= 1
+                        && request.resource.data.division <= 7);
+      allow update: if isAdmin()
+                    || (request.resource.data.diff(resource.data)
+                          .affectedKeys().hasOnly(['count', 'updatedAt'])
+                        && request.resource.data.count > resource.data.count
+                        && request.resource.data.count <= resource.data.count + 5);
       allow delete: if isAdmin();
     }
   }

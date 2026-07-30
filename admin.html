@@ -105,6 +105,24 @@
       select {
         font: inherit;
       }
+      select {
+        padding: 0.55rem 0.7rem;
+        border: none;
+        border-radius: var(--r-sm);
+        background: rgba(0, 0, 0, 0.4);
+        color: var(--text);
+      }
+      td.sel,
+      th.sel {
+        width: 1.8rem;
+        text-align: center;
+      }
+      td.sel input {
+        width: 1.05rem;
+        height: 1.05rem;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
       .btn {
         font-weight: 600;
         text-transform: uppercase;
@@ -411,6 +429,12 @@
         <section>
           <h2>Candidates &amp; results</h2>
           <p id="count-line"></p>
+          <div class="row hidden" id="merge-bar" style="margin-bottom: 0.6rem">
+            <button id="merge-btn" class="btn small">Merge selected</button>
+            <span class="hint" style="margin: 0">
+              Tick the duplicate rows, then merge them into one candidate.
+            </span>
+          </div>
           <div class="table-scroll">
             <table>
               <thead>
@@ -431,6 +455,16 @@
           </p>
           <textarea id="bulk-input" placeholder="Jane Smith&#10;John Doe&#10;…"></textarea>
           <div class="row">
+            <select id="bulk-division">
+              <option value="0">All divisions</option>
+              <option value="1">Division 1 only</option>
+              <option value="2">Division 2 only</option>
+              <option value="3">Division 3 only</option>
+              <option value="4">Division 4 only</option>
+              <option value="5">Division 5 only</option>
+              <option value="6">Division 6 only</option>
+              <option value="7">Division 7 only</option>
+            </select>
             <button id="add-pasted" class="btn">Add pasted names</button>
             <label class="btn secondary" for="file-input" style="cursor: pointer">
               Upload Excel / CSV

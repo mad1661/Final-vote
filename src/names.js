@@ -74,7 +74,7 @@ export async function addName(name) {
 
 // Bulk-add names (admin). Chunked to stay under Firestore's 500-write
 // batch limit; slug keying means duplicates merge instead of multiplying.
-export async function addNames(labels) {
+export async function addNames(labels, division = 0) {
   const entries = [];
   const seen = new Set();
   for (const raw of labels) {
@@ -89,13 +89,45 @@ export async function addNames(labels) {
     for (const { id, label } of entries.slice(i, i + 450)) {
       batch.set(
         doc(NAMES, id),
-        { name: label, createdAt: serverTimestamp() },
+        { name: label, division, createdAt: serverTimestamp() },
         { merge: true }
       );
     }
     await batch.commit();
   }
   return entries.length;
+}
+
+// Admin: fold duplicate candidates into one. Combines each duplicate's
+// division tallies into the primary, re-points its nomination docs to the
+// primary name (so slug dedupe absorbs them), and deletes the leftovers.
+export async function mergeCandidates(primary, duplicates, votes) {
+  const batch = writeBatch(db);
+  for (const dup of duplicates) {
+    if (dup.id === primary.id) continue;
+    const perName = votes.get(dup.id) ?? {};
+    for (const d of DIVISIONS) {
+      const n = perName[d] ?? 0;
+      if (n > 0) {
+        batch.set(
+          doc(VOTES, `d${d}_${primary.id}`),
+          {
+            count: increment(n),
+            division: d,
+            nameId: primary.id,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      batch.delete(doc(VOTES, `d${d}_${dup.id}`));
+    }
+    for (const nomId of dup.nominationDocIds ?? []) {
+      batch.update(doc(NOMINATIONS, nomId), { nomineeName: primary.name });
+    }
+    batch.delete(doc(NAMES, dup.id));
+  }
+  await batch.commit();
 }
 
 // Remove a candidate everywhere (admin): the admin-added name doc, its
@@ -175,6 +207,8 @@ export function watchBoard(callback) {
     for (const d of DIVISIONS) {
       const merged = new Map(nominated.get(d) ?? []);
       for (const [id, info] of adminNames) {
+        const scope = info.division ?? 0;
+        if (scope !== 0 && scope !== d) continue;
         if (!merged.has(id)) merged.set(id, { name: info.name });
       }
       byDivision[d] = [...merged.entries()]
@@ -202,6 +236,7 @@ export function watchBoard(callback) {
         name: displayName(docSnap.id, data),
         bio: typeof data.bio === "string" ? data.bio : "",
         photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
+        division: typeof data.division === "number" ? data.division : 0,
       });
     });
     emit();

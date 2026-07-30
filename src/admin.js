@@ -18,6 +18,7 @@ import {
   addNames,
   divisionCount,
   loadDivisionAssets,
+  mergeCandidates,
   removeName,
   saveName,
   totalCount,
@@ -55,6 +56,9 @@ const editorStatus = document.getElementById("editor-status");
 let board = { byDivision: {}, votes: new Map() };
 let stopWatching = null;
 let editingId = null;
+const selected = new Set();
+const mergeBar = document.getElementById("merge-bar");
+const bulkDivision = document.getElementById("bulk-division");
 
 loadDivisionAssets("default").then((assets) => {
   if (assets.logo75) logoEl.src = assets.logo75;
@@ -92,11 +96,12 @@ function unionCandidates() {
 
 function renderHead() {
   headRow.replaceChildren(
-    ...["Candidate", ...DIVISIONS.map((d) => `D${d}`), "Total", ""].map(
+    ...["", "Candidate", ...DIVISIONS.map((d) => `D${d}`), "Total", ""].map(
       (label, i) => {
         const th = document.createElement("th");
         th.textContent = label;
-        if (i > 0 && i <= DIVISIONS.length + 1) th.className = "num";
+        if (i === 0) th.className = "sel";
+        else if (i > 1 && i <= DIVISIONS.length + 2) th.className = "num";
         return th;
       }
     )
@@ -119,6 +124,19 @@ function renderNames() {
   namesBody.replaceChildren(
     ...rows.map((entry) => {
       const tr = document.createElement("tr");
+
+      const selTd = document.createElement("td");
+      selTd.className = "sel";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = selected.has(entry.id);
+      cb.addEventListener("change", () => {
+        if (cb.checked) selected.add(entry.id);
+        else selected.delete(entry.id);
+        mergeBar.classList.toggle("hidden", selected.size < 2);
+      });
+      selTd.append(cb);
+      tr.append(selTd);
 
       const nameTd = document.createElement("td");
       const cand = document.createElement("div");
@@ -191,6 +209,36 @@ function renderNames() {
     })
   );
 }
+
+/* ---------- Merge ---------- */
+
+document.getElementById("merge-btn").addEventListener("click", async () => {
+  const union = unionCandidates();
+  const chosen = [...selected].map((id) => union.get(id)).filter(Boolean);
+  if (chosen.length < 2) return;
+  const listing = chosen.map((c, i) => `${i + 1}. ${c.name}`).join("\n");
+  const answer = prompt(
+    `Merging ${chosen.length} candidates into one.\n${listing}\n\nEnter the number of the name to KEEP:`,
+    "1"
+  );
+  if (answer === null) return;
+  const idx = Number(answer) - 1;
+  const primary = chosen[idx];
+  if (!primary) {
+    alert("Not a valid number — merge cancelled.");
+    return;
+  }
+  const duplicates = chosen.filter((c) => c.id !== primary.id);
+  if (!confirm(`Keep "${primary.name}" and fold in ${duplicates.map((d) => `"${d.name}"`).join(", ")}? Their votes and nominations move to "${primary.name}".`)) return;
+  try {
+    await mergeCandidates(primary, duplicates, board.votes);
+    selected.clear();
+    mergeBar.classList.add("hidden");
+  } catch (err) {
+    console.error("Merge failed:", err);
+    alert("Merge failed — check your admin access and try again.");
+  }
+});
 
 /* ---------- Editor ---------- */
 
@@ -322,8 +370,9 @@ async function bulkAdd(labels, sourceLabel) {
   }
   bulkStatus.textContent = `Adding ${cleaned.length} name${cleaned.length === 1 ? "" : "s"}…`;
   try {
-    const added = await addNames(cleaned);
-    bulkStatus.textContent = `Done — ${added} unique name${added === 1 ? "" : "s"} added/updated from ${sourceLabel}.`;
+    const added = await addNames(cleaned, Number(bulkDivision.value));
+    const scope = Number(bulkDivision.value) === 0 ? "all divisions" : `Division ${bulkDivision.value} only`;
+    bulkStatus.textContent = `Done — ${added} unique name${added === 1 ? "" : "s"} added/updated from ${sourceLabel} (${scope}).`;
   } catch (err) {
     console.error("Bulk add failed:", err);
     bulkStatus.textContent =
