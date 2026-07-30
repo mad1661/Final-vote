@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "voting-10a21"
+  },
+  "targets": {
+    "voting-10a21": {
+      "hosting": {
+        "vote": ["voting-10a21-vote"]
+      }
+    }
+  }
+}

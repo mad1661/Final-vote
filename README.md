@@ -81,3 +81,30 @@ Existing name documents stay read-only under these rules.
 ```bash
 npm run build
 ```
+
+## Deploying next to the existing site (without touching it)
+
+The voting app deploys to its **own Firebase Hosting site** inside the same
+project, so the existing site is never modified or overwritten. One-time
+setup on your computer:
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase hosting:sites:create voting-10a21-vote
+```
+
+Then, from this repo, every deploy is:
+
+```bash
+npm install
+npm run build
+firebase deploy --only hosting:vote
+```
+
+The voting page goes live at **https://voting-10a21-vote.web.app** — your
+existing site keeps its own URL and files, completely untouched. Finally,
+add a link (e.g. "Vote") from your existing site to that URL.
+
+If you prefer a different site name than `voting-10a21-vote`, create it with
+that name instead and update it in `.firebaserc`.
