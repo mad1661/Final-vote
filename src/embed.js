@@ -59,7 +59,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v7";
+const VERSION = "v8";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -79,6 +79,52 @@ foot.textContent = `Live results · ${VERSION} · ${DEMO ? "demo" : detected.sou
 let board = { byDivision: {}, votes: new Map() };
 let picks = new Set();
 let submitted = false;
+
+// Phone screenshots arrive as tall images with big black (or white)
+// letterbox bars; a square crop shows mostly bar. Detect the real content
+// bounds at thumbnail scale and swap in a trimmed copy of the photo.
+function smartTrim(img) {
+  try {
+    const nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh) return;
+    const w = 64, h = Math.max(8, Math.round((64 * nh) / nw));
+    const probe = document.createElement("canvas");
+    probe.width = w; probe.height = h;
+    const ctx = probe.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const rowHas = new Array(h).fill(false);
+    const colHas = new Array(w).fill(false);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        if (lum > 24 && lum < 240) {
+          rowHas[y] = true;
+          colHas[x] = true;
+        }
+      }
+    }
+    let top = rowHas.indexOf(true), bottom = rowHas.lastIndexOf(true);
+    let left = colHas.indexOf(true), right = colHas.lastIndexOf(true);
+    if (top < 0 || left < 0) return;
+    const sy = Math.floor((top / h) * nh), ey = Math.ceil(((bottom + 1) / h) * nh);
+    const sx = Math.floor((left / w) * nw), ex = Math.ceil(((right + 1) / w) * nw);
+    const cw = ex - sx, ch = ey - sy;
+    // only bother when the bars are a meaningful share of the image
+    if (cw / nw > 0.94 && ch / nh > 0.94) return;
+    const out = document.createElement("canvas");
+    out.width = cw; out.height = ch;
+    out.getContext("2d").drawImage(img, sx, sy, cw, ch, 0, 0, cw, ch);
+    out.toBlob((blob) => {
+      if (!blob) return;
+      img.classList.remove("contain");
+      img.src = URL.createObjectURL(blob);
+    }, "image/jpeg", 0.92);
+  } catch {
+    // canvas tainted (no CORS on that host) or draw failure — leave as-is
+  }
+}
 
 function initials(name) {
   return name
@@ -247,14 +293,26 @@ function render() {
         avatar.className = "avatar";
         if (entry.photoUrl) {
           const img = document.createElement("img");
+          img.crossOrigin = "anonymous";
           img.src = entry.photoUrl;
           img.alt = "";
           img.loading = "lazy";
+          let trimmed = false;
           img.addEventListener("load", () => {
             const ratio = img.naturalWidth / img.naturalHeight;
             if (ratio > 1.7 || ratio < 0.55) img.classList.add("contain");
+            if (!trimmed) {
+              trimmed = true;
+              smartTrim(img);
+            }
           });
           img.addEventListener("error", () => {
+            // retry once without CORS mode (hosts that lack CORS headers)
+            if (img.crossOrigin) {
+              img.crossOrigin = null;
+              img.src = entry.photoUrl;
+              return;
+            }
             img.remove();
             avatar.textContent = initials(entry.name);
           });
