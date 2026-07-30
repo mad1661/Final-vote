@@ -493,6 +493,67 @@
         color: #fff;
         cursor: pointer;
       }
+      .bio-page {
+        max-width: 42rem;
+        margin: 0 auto;
+      }
+      .bio-page .back-btn {
+        font-family: var(--font);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 0.8rem;
+        padding: 0.65rem 1.4rem;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        color: #fff;
+        cursor: pointer;
+        margin: 0.4rem 0 0.9rem;
+      }
+      .bio-page img.main {
+        width: 100%;
+        max-height: 62vh;
+        object-fit: contain;
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: var(--r-md);
+        margin-bottom: 0.7rem;
+      }
+      .bio-page .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(4.2rem, 1fr));
+        gap: 0.4rem;
+        margin-bottom: 0.8rem;
+      }
+      .bio-page .photo-grid img {
+        width: 100%;
+        height: 4.2rem;
+        object-fit: cover;
+        border-radius: var(--r-sm);
+        cursor: pointer;
+      }
+      .bio-page h3 {
+        margin: 0 0 0.15rem;
+        font-size: 1.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .bio-page .cat {
+        font-size: 0.74rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent-3);
+        margin-bottom: 0.7rem;
+      }
+      .bio-page p.bio-text {
+        font-family: var(--font-serif);
+        font-size: 1.02rem;
+        line-height: 1.6;
+        color: var(--text-2);
+        margin: 0 0 1.2rem;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+      }
       .foot {
         margin-top: 1rem;
         font-size: 0.6rem;
@@ -525,6 +586,7 @@
       </div>
       <p id="status">Loading…</p>
       <ul id="list"></ul>
+      <div class="bio-page hidden" id="bio-page"></div>
       <div class="submit-bar hidden" id="submit-bar">
         <button class="submit-btn" id="submit-btn" disabled>Submit votes</button>
       </div>

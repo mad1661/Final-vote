@@ -746,15 +746,18 @@ function snippetRow(html, label) {
   return row;
 }
 
+const RESIZE_SCRIPT =
+  '<script>window.addEventListener("message",function(e){if(!e.data||!e.data.legendVoteHeight)return;document.querySelectorAll("iframe[data-legend-vote]").forEach(function(f){if(f.contentWindow===e.source)f.style.height=e.data.legendVoteHeight+"px"})});</' + "script>";
+
 function renderSnippets() {
   const base = `${location.origin}/embed.html`;
   const style =
-    "width:100%;height:800px;border:0;border-radius:16px;background:#000";
+    "width:100%;height:900px;border:0;border-radius:16px;background:#000";
 
   const universalNote = document.createElement("p");
   universalNote.className = "hint";
   universalNote.textContent =
-    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, …) and shows that division's ballot automatically. Add ?theme=light for light-colored sites.";
+    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, …) and shows that division's ballot automatically. The included script grows the frame to fit, so the page scrolls smoothly with no inner scrollbar. Add ?theme=light for light-colored sites.";
 
   const overrideNote = document.createElement("p");
   overrideNote.className = "hint";
@@ -764,13 +767,13 @@ function renderSnippets() {
   snippetsEl.replaceChildren(
     universalNote,
     snippetRow(
-      `<iframe src="${base}" title="'51 Legends Vote" style="${style}"></iframe>`,
+      `<iframe data-legend-vote src="${base}" title="'51 Legends Vote" scrolling="no" style="${style}"></iframe>${RESIZE_SCRIPT}`,
       "Copy universal"
     ),
     overrideNote,
     ...DIVISIONS.map((d) =>
       snippetRow(
-        `<iframe src="${base}?div=${d}" title="'51 Legends Vote — Division ${d}" style="${style}"></iframe>`,
+        `<iframe data-legend-vote src="${base}?div=${d}" title="'51 Legends Vote — Division ${d}" scrolling="no" style="${style}"></iframe>${RESIZE_SCRIPT}`,
         `Copy D${d}`
       )
     )

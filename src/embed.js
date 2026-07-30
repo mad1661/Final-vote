@@ -59,9 +59,28 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v9";
+const VERSION = "v10";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
+
+// Inside an iframe, report our content height so the host page (using
+// the snippet's resize script) can grow the iframe and scroll as one
+// page instead of nesting a second scrollbar.
+try {
+  if (window.self !== window.top) {
+    const report = () => {
+      parent.postMessage(
+        { legendVoteHeight: document.documentElement.scrollHeight },
+        "*"
+      );
+    };
+    new ResizeObserver(report).observe(document.body);
+    addEventListener("load", report);
+    setInterval(report, 1500);
+  }
+} catch {
+  // sandboxed parent — leave as-is
+}
 
 const status = document.getElementById("status");
 const listEl = document.getElementById("list");
@@ -161,56 +180,80 @@ function demoBoard() {
   return { byDivision, votes };
 }
 
+const bioPage = document.getElementById("bio-page");
+let bioOpen = false;
+
+function closeBio() {
+  bioOpen = false;
+  bioPage.classList.add("hidden");
+  listEl.classList.remove("hidden");
+  photoStrip.classList.remove("hidden");
+  status.classList.remove("hidden");
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+function backButton() {
+  const b = document.createElement("button");
+  b.className = "back-btn";
+  b.textContent = "← Back to voting";
+  b.addEventListener("click", closeBio);
+  return b;
+}
+
 function showBio(entry) {
-  const card = document.createElement("div");
-  card.className = "bio-card";
+  bioOpen = true;
   const photos = entry.photos?.length ? entry.photos : entry.photoUrl ? [entry.photoUrl] : [];
+  const parts = [backButton()];
+  let main = null;
   if (photos[0]) {
-    const img = document.createElement("img");
-    img.src = photos[0];
-    img.alt = entry.name;
-    card.append(img);
+    main = document.createElement("img");
+    main.className = "main";
+    main.src = photos[0];
+    main.alt = entry.name;
+    parts.push(main);
   }
   if (photos.length > 1) {
     const grid = document.createElement("div");
     grid.className = "photo-grid";
-    for (const url of photos.slice(1, 7)) {
+    for (const url of photos.slice(1, 9)) {
       const t = document.createElement("img");
       t.src = url;
       t.alt = entry.name;
       t.loading = "lazy";
       t.addEventListener("click", () => {
-        const main = card.querySelector("img");
         const prev = main.src;
         main.src = url;
         t.src = prev;
       });
       grid.append(t);
     }
-    card.append(grid);
+    parts.push(grid);
   }
   const h3 = document.createElement("h3");
   h3.textContent = entry.name;
-  card.append(h3);
+  parts.push(h3);
   if (entry.category) {
     const cat = document.createElement("div");
     cat.className = "cat";
     cat.textContent = entry.category;
-    card.append(cat);
+    parts.push(cat);
   }
   const p = document.createElement("p");
+  p.className = "bio-text";
   p.textContent = entry.bio || "No bio yet.";
-  card.append(p);
-  const close = document.createElement("button");
-  close.textContent = "Close";
-  close.addEventListener("click", () => overlay.classList.add("hidden"));
-  card.append(close);
-  overlay.replaceChildren(card);
-  overlay.classList.remove("hidden");
+  parts.push(p);
+  parts.push(backButton());
+
+  bioPage.replaceChildren(...parts);
+  listEl.classList.add("hidden");
+  photoStrip.classList.add("hidden");
+  status.classList.add("hidden");
+  submitBar.classList.add("hidden");
+  pickBanner.classList.add("hidden");
+  bioPage.classList.remove("hidden");
+  window.scrollTo({ top: 0 });
 }
-overlay.addEventListener("click", (e) => {
-  if (e.target === overlay) overlay.classList.add("hidden");
-});
 
 function renderPhotoStrip(rows) {
   const photos = [];
@@ -243,6 +286,7 @@ function renderPhotoStrip(rows) {
 }
 
 function render() {
+  if (bioOpen) return;
   const voted = submitted || (DEMO ? false : hasVoted(division));
   const mine = new Set(DEMO && submitted ? picks : votedFor(division));
   if (submitted) picks.forEach((p) => mine.add(p));
