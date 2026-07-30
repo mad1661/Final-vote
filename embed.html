@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Legend Vote</title>
+    <title>'51 Legends — Vote</title>
     <link rel="icon" type="image/png" href="/nhra-75-logo-small.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,39 +15,40 @@
       :root {
         color-scheme: dark;
         --font: "Oswald", -apple-system, system-ui, sans-serif;
-        --font-display: "Oswald", system-ui, sans-serif;
+        --font-serif: "Playfair Display", Georgia, serif;
         --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
         --bg: #000000;
         --surface: rgba(255, 255, 255, 0.05);
-        --surface-2: rgba(255, 255, 255, 0.08);
-        --surface-3: rgba(255, 255, 255, 0.11);
+        --surface-2: rgba(255, 255, 255, 0.09);
+        --surface-3: rgba(255, 255, 255, 0.13);
         --accent: #e30613;
         --accent-2: #ff2a36;
         --accent-3: #ff8a91;
         --accent-glow: rgba(227, 6, 19, 0.35);
+        --gold: #f5c542;
         --text: #fafafb;
         --text-2: #cdcdd6;
         --text-3: #a3a3b0;
         --text-4: #74747f;
-        --r-lg: 20px;
-        --r-md: 14px;
-        --r-sm: 10px;
-        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
-          0 8px 24px rgba(0, 0, 0, 0.35);
+        --r-lg: 18px;
+        --r-md: 13px;
+        --r-sm: 9px;
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+          0 10px 26px rgba(0, 0, 0, 0.45);
       }
       :root[data-theme="light"] {
         color-scheme: light;
-        --bg: #f4f4f7;
-        --surface: rgba(20, 20, 30, 0.04);
-        --surface-2: rgba(20, 20, 30, 0.07);
-        --surface-3: rgba(20, 20, 30, 0.1);
-        --accent-glow: rgba(227, 6, 19, 0.22);
+        --bg: #f4f3f0;
+        --surface: rgba(20, 20, 30, 0.05);
+        --surface-2: rgba(20, 20, 30, 0.08);
+        --surface-3: rgba(20, 20, 30, 0.12);
+        --accent-glow: rgba(227, 6, 19, 0.2);
         --text: #17171c;
         --text-2: #3c3c46;
         --text-3: #5d5d68;
         --text-4: #8c8c96;
-        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset,
-          0 8px 24px rgba(20, 20, 30, 0.08);
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.7) inset,
+          0 10px 26px rgba(20, 20, 30, 0.09);
       }
       * {
         box-sizing: border-box;
@@ -56,193 +57,200 @@
         margin: 0;
         font-family: var(--font);
         background:
-          radial-gradient(560px 260px at 18% -8%, var(--accent-glow), transparent 65%),
+          radial-gradient(640px 300px at 50% -10%, var(--accent-glow), transparent 65%),
           var(--bg);
         color: var(--text);
         min-height: 100vh;
       }
       .widget {
-        padding: 1.15rem 1.15rem 1rem;
+        padding: 1.2rem 1.1rem 5.2rem;
         max-width: 34rem;
         margin: 0 auto;
       }
+      /* Header */
       .head {
-        display: flex;
-        align-items: center;
-        gap: 0.7rem;
-        margin-bottom: 0.9rem;
+        text-align: center;
+        margin-bottom: 1rem;
       }
       .logo {
-        height: 34px;
+        max-height: 110px;
+        max-width: 78%;
         width: auto;
-        flex-shrink: 0;
-        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+        filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+        margin-bottom: 0.5rem;
       }
-      .head-text {
-        flex: 1;
-        min-width: 0;
-      }
-      .title {
-        font-family: var(--font-display);
+      .head h1 {
+        margin: 0;
+        font-size: 1.35rem;
         font-weight: 700;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
-        font-size: 1.2rem;
-        line-height: 1.1;
-        white-space: nowrap;
       }
-      .title em {
+      .head h1 em {
         font-style: normal;
         color: var(--accent-2);
       }
-      .sub {
-        font-family: var(--font-mono);
-        font-size: 0.62rem;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        color: var(--text-4);
-        margin-top: 0.15rem;
-      }
-      .div-chip {
-        font-family: var(--font-display);
-        font-weight: 700;
-        font-size: 0.9rem;
-        letter-spacing: 0.06em;
-        color: #fff;
-        background: linear-gradient(135deg, var(--accent), #a31515);
-        padding: 0.45rem 0.85rem;
-        border-radius: var(--r-sm);
-        box-shadow: 0 0 24px var(--accent-glow);
-        white-space: nowrap;
-        text-transform: uppercase;
+      .head .div-line {
+        font-family: var(--font-serif);
+        font-style: italic;
+        color: var(--text-3);
+        font-size: 0.95rem;
+        margin-top: 0.2rem;
       }
       .rule {
         height: 2px;
         border-radius: 999px;
-        background: linear-gradient(90deg, var(--accent), transparent 70%);
-        margin-bottom: 0.8rem;
+        background: linear-gradient(90deg, transparent, var(--accent) 25%, var(--accent) 75%, transparent);
+        margin: 0.9rem 0;
       }
       #status {
-        color: var(--text-3);
-        font-size: 0.85rem;
+        color: var(--text-2);
+        font-size: 0.92rem;
+        letter-spacing: 0.03em;
         min-height: 1.2em;
-        margin: 0 0 0.8rem;
+        margin: 0 0 0.85rem;
+        text-align: center;
       }
       #status b {
         color: var(--accent-3);
         font-weight: 600;
       }
+      /* Cards */
       #list {
         list-style: none;
         margin: 0;
         padding: 0;
         display: grid;
-        gap: 0.5rem;
+        gap: 0.55rem;
       }
       .row {
         position: relative;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.8rem;
         background: var(--surface);
         border-radius: var(--r-md);
-        padding: 0.7rem 0.85rem;
+        padding: 0.65rem 0.8rem;
         box-shadow: var(--shadow-card);
-        transition: background 0.15s ease, transform 0.15s ease;
+        transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
         overflow: hidden;
+        cursor: pointer;
+        user-select: none;
       }
       .row:hover {
         background: var(--surface-2);
         transform: translateY(-1px);
       }
-      .row.chosen {
+      .row.picked {
         background: var(--surface-2);
-        box-shadow: inset 3px 0 0 var(--accent), 0 0 24px var(--accent-glow),
+        box-shadow: inset 0 0 0 2px var(--accent), 0 0 22px var(--accent-glow),
           var(--shadow-card);
       }
       .fill {
         position: absolute;
         inset: 0;
         width: 0;
-        background: linear-gradient(
-          90deg,
-          rgba(227, 6, 19, 0.22),
-          rgba(227, 6, 19, 0.02)
-        );
+        background: linear-gradient(90deg, rgba(227, 6, 19, 0.22), rgba(227, 6, 19, 0.02));
         transition: width 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
         pointer-events: none;
       }
-      .rank {
+      .avatar {
+        position: relative;
+        width: 3rem;
+        height: 3rem;
+        border-radius: var(--r-sm);
+        flex-shrink: 0;
+        object-fit: cover;
+        background: var(--surface-3);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text-3);
+        letter-spacing: 0.04em;
+        overflow: hidden;
+      }
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .info {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      .name {
+        font-weight: 600;
+        font-size: 1.02rem;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .meta {
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-4);
+        margin-top: 0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .meta .bio-link {
+        color: var(--accent-3);
+      }
+      .count {
         position: relative;
         font-family: var(--font-mono);
         font-size: 0.72rem;
+        color: var(--text-3);
+        text-align: right;
+        white-space: nowrap;
+      }
+      .count b {
+        display: block;
+        font-size: 0.95rem;
+        color: var(--text-2);
         font-weight: 500;
-        color: var(--text-4);
-        background: var(--surface-2);
+      }
+      .pick-box {
+        position: relative;
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        background: var(--surface-3);
+        color: transparent;
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .row.picked .pick-box {
+        background: var(--accent);
+        color: #fff;
+      }
+      .rank-medal {
+        position: relative;
+        font-family: var(--font-mono);
+        font-size: 0.74rem;
+        font-weight: 700;
         width: 1.7rem;
         height: 1.7rem;
         border-radius: 50%;
         display: grid;
         place-items: center;
-        flex-shrink: 0;
-      }
-      .row.r1 .rank { background: #f5c542; color: #211a00; }
-      .row.r2 .rank { background: #c9d1e0; color: #1c2029; }
-      .row.r3 .rank { background: #d08a4e; color: #241300; }
-      .name {
-        position: relative;
-        flex: 1;
-        min-width: 0;
-        font-weight: 600;
-        font-size: 0.98rem;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .count {
-        position: relative;
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
+        background: var(--surface-3);
         color: var(--text-3);
-        white-space: nowrap;
-        text-align: right;
-      }
-      .count b {
-        display: block;
-        font-size: 0.9rem;
-        color: var(--text-2);
-        font-weight: 500;
-      }
-      .vote-btn {
-        position: relative;
-        font-family: var(--font-display);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-size: 0.72rem;
-        padding: 0.55rem 1rem;
-        border: none;
-        border-radius: var(--r-sm);
-        background: linear-gradient(135deg, var(--accent-2), var(--accent));
-        color: #fff;
-        cursor: pointer;
-        transition: box-shadow 0.15s ease, filter 0.15s ease;
         flex-shrink: 0;
       }
-      .vote-btn:hover:not(:disabled) {
-        filter: brightness(1.12);
-        box-shadow: 0 0 20px var(--accent-glow);
-      }
-      .vote-btn:disabled {
-        background: var(--surface-2);
-        color: var(--text-4);
-        cursor: default;
-      }
-      .row.chosen .vote-btn {
-        background: var(--accent);
-        color: #fff;
-      }
+      .row.r1 .rank-medal { background: var(--gold); color: #211a00; }
+      .row.r2 .rank-medal { background: #c9d1e0; color: #1c2029; }
+      .row.r3 .rank-medal { background: #d08a4e; color: #241300; }
       .empty {
         color: var(--text-3);
         text-align: center;
@@ -252,49 +260,148 @@
       .choose {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 0.45rem;
       }
       .choose a {
-        font-family: var(--font-display);
         font-weight: 600;
         letter-spacing: 0.08em;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         text-decoration: none;
         color: #fff;
         background: linear-gradient(135deg, var(--accent-2), var(--accent));
-        padding: 0.55rem 0.95rem;
+        padding: 0.55rem 1rem;
         border-radius: var(--r-sm);
       }
-      .choose a:hover {
+      /* Submit bar */
+      .submit-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
+        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.75) 40%);
+        pointer-events: none;
+      }
+      :root[data-theme="light"] .submit-bar {
+        background: linear-gradient(180deg, transparent, rgba(244, 243, 240, 0.9) 40%);
+      }
+      .submit-btn {
+        pointer-events: auto;
+        font-family: var(--font);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.85rem;
+        padding: 0.8rem 2.2rem;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 0 6px 24px var(--accent-glow);
+        transition: filter 0.15s ease, opacity 0.15s ease;
+      }
+      .submit-btn:hover:not(:disabled) {
         filter: brightness(1.12);
-        box-shadow: 0 0 20px var(--accent-glow);
+      }
+      .submit-btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      /* Bio overlay */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: grid;
+        place-items: center;
+        padding: 1.2rem;
+        z-index: 50;
+      }
+      .bio-card {
+        background: #121216;
+        border-radius: var(--r-lg);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 60px rgba(0, 0, 0, 0.6);
+        max-width: 26rem;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 1.2rem 1.2rem 1.3rem;
+        color: #fafafb;
+      }
+      .bio-card img {
+        width: 100%;
+        max-height: 15rem;
+        object-fit: cover;
+        border-radius: var(--r-md);
+        margin-bottom: 0.8rem;
+      }
+      .bio-card h3 {
+        margin: 0 0 0.15rem;
+        font-size: 1.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .bio-card .cat {
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent-3);
+        margin-bottom: 0.6rem;
+      }
+      .bio-card p {
+        font-family: var(--font-serif);
+        line-height: 1.55;
+        color: #cdcdd6;
+        margin: 0 0 1rem;
+        white-space: pre-wrap;
+      }
+      .bio-card button {
+        font-family: var(--font);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        padding: 0.55rem 1.4rem;
+        border: none;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
       }
       .foot {
-        margin-top: 0.9rem;
-        font-size: 0.62rem;
+        margin-top: 1rem;
+        font-size: 0.6rem;
         color: var(--text-4);
         text-align: center;
         font-family: var(--font-mono);
         letter-spacing: 0.12em;
         text-transform: uppercase;
       }
+      .hidden {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
     <div class="widget">
       <div class="head">
-        <img class="logo" src="/nhra-75-logo-small.png" alt="NHRA" />
-        <div class="head-text">
-          <div class="title">Legend <em>Vote</em></div>
-          <div class="sub">Championship Drag Racing</div>
-        </div>
-        <span class="div-chip" id="div-tag">—</span>
+        <img class="logo" id="logo" src="/nhra-75-logo.png" alt="'51 Legends" />
+        <h1>Vote for the <em>'51 Legends</em></h1>
+        <div class="div-line" id="div-line">&nbsp;</div>
       </div>
       <div class="rule"></div>
       <p id="status">Loading…</p>
       <ul id="list"></ul>
-      <div class="foot" id="foot">Live results · One vote per person</div>
+      <div class="submit-bar hidden" id="submit-bar">
+        <button class="submit-btn" id="submit-btn" disabled>Submit votes</button>
+      </div>
+      <div class="foot" id="foot">Live results</div>
     </div>
+    <div class="overlay hidden" id="overlay"></div>
     <script type="module" src="/src/embed.js"></script>
   </body>
 </html>

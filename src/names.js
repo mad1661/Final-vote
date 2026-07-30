@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   increment,
   onSnapshot,
   serverTimestamp,
@@ -9,6 +10,9 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
+
+// Each visitor votes for their top picks (up to MAX_PICKS) per division.
+export const MAX_PICKS = 5;
 
 export const DIVISIONS = [1, 2, 3, 4, 5, 6, 7];
 
@@ -108,17 +112,53 @@ export async function removeName(id, nominationDocIds = []) {
   await batch.commit();
 }
 
-export async function voteFor(id, division) {
+// Cast one ballot: +1 for each picked name in the division.
+export async function castVotes(ids, division) {
+  const batch = writeBatch(db);
+  for (const id of ids.slice(0, MAX_PICKS)) {
+    batch.set(
+      doc(VOTES, `d${division}_${id}`),
+      {
+        count: increment(1),
+        division,
+        nameId: id,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+  await batch.commit();
+}
+
+// Admin: create/update a candidate's display name, bio, and photo.
+export async function saveName(id, { name, bio, photoUrl }) {
   await setDoc(
-    doc(VOTES, `d${division}_${id}`),
+    doc(NAMES, id),
     {
-      count: increment(1),
-      division,
-      nameId: id,
+      ...(name !== undefined && { name }),
+      ...(bio !== undefined && { bio }),
+      ...(photoUrl !== undefined && { photoUrl }),
       updatedAt: serverTimestamp(),
     },
     { merge: true }
   );
+}
+
+// Division branding ('51 Legends logos etc.) from the nomination app's
+// divisionAssets collection, falling back to the shared default doc.
+export async function loadDivisionAssets(division) {
+  try {
+    const [divSnap, defSnap] = await Promise.all([
+      getDoc(doc(db, "divisionAssets", String(division))),
+      getDoc(doc(db, "divisionAssets", "default")),
+    ]);
+    return {
+      ...(defSnap.exists() ? defSnap.data() : {}),
+      ...(divSnap.exists() ? divSnap.data() : {}),
+    };
+  } catch {
+    return {};
+  }
 }
 
 // Calls `callback` with { byDivision, votes } on every change:
@@ -134,15 +174,21 @@ export function watchBoard(callback) {
     const byDivision = {};
     for (const d of DIVISIONS) {
       const merged = new Map(nominated.get(d) ?? []);
-      for (const [id, name] of adminNames) {
-        if (!merged.has(id)) merged.set(id, name);
+      for (const [id, info] of adminNames) {
+        if (!merged.has(id)) merged.set(id, { name: info.name });
       }
       byDivision[d] = [...merged.entries()]
-        .map(([id, name]) => ({
-          id,
-          name,
-          nominationDocIds: nominationDocs.get(id) ?? [],
-        }))
+        .map(([id, info]) => {
+          const override = adminNames.get(id) ?? {};
+          return {
+            id,
+            name: override.name ?? info.name,
+            photoUrl: override.photoUrl || info.photoUrl || "",
+            bio: override.bio || info.bio || "",
+            category: info.category || "",
+            nominationDocIds: nominationDocs.get(id) ?? [],
+          };
+        })
         .sort((a, b) => a.name.localeCompare(b.name));
     }
     callback({ byDivision, votes });
@@ -151,7 +197,12 @@ export function watchBoard(callback) {
   const stopNames = onSnapshot(NAMES, (snapshot) => {
     adminNames = new Map();
     snapshot.forEach((docSnap) => {
-      adminNames.set(docSnap.id, displayName(docSnap.id, docSnap.data()));
+      const data = docSnap.data();
+      adminNames.set(docSnap.id, {
+        name: displayName(docSnap.id, data),
+        bio: typeof data.bio === "string" ? data.bio : "",
+        photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
+      });
     });
     emit();
   });
@@ -166,7 +217,12 @@ export function watchBoard(callback) {
       const id = slugify(label);
       if (!DIVISIONS.includes(division) || !id) return;
       if (!nominated.has(division)) nominated.set(division, new Map());
-      nominated.get(division).set(id, label);
+      const existing = nominated.get(division).get(id) ?? { name: label };
+      existing.name = label;
+      if (!existing.photoUrl && data.photoUrl) existing.photoUrl = data.photoUrl;
+      if (!existing.bio && data.reason) existing.bio = String(data.reason);
+      if (!existing.category && data.category) existing.category = String(data.category);
+      nominated.get(division).set(id, existing);
       const docs = nominationDocs.get(id) ?? [];
       docs.push(docSnap.id);
       nominationDocs.set(id, docs);
@@ -214,10 +270,18 @@ export function hasVoted(division) {
   return localStorage.getItem(votedKey(division)) !== null;
 }
 
-export function markVoted(division, id) {
-  localStorage.setItem(votedKey(division), id);
+export function markVoted(division, ids) {
+  localStorage.setItem(votedKey(division), JSON.stringify(ids));
 }
 
+// The ids this browser voted for (handles the older single-pick format).
 export function votedFor(division) {
-  return localStorage.getItem(votedKey(division));
+  const raw = localStorage.getItem(votedKey(division));
+  if (raw === null) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [raw];
+  } catch {
+    return [raw];
+  }
 }

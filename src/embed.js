@@ -1,10 +1,13 @@
 import { app } from "./firebase.js";
 import {
   DIVISIONS,
+  DIVISION_NAMES,
+  MAX_PICKS,
+  castVotes,
   divisionCount,
   hasVoted,
+  loadDivisionAssets,
   markVoted,
-  voteFor,
   votedFor,
   watchBoard,
 } from "./names.js";
@@ -23,11 +26,6 @@ const DEMO = params.has("demo");
 // Division resolution. The embedding site's domain is the source of truth
 // (nhradiv1.com -> Division 1), so it outranks a ?div=N pinned in the
 // snippet — a mispasted snippet self-corrects on a division domain.
-// Priority:
-// 1. any ancestor frame's origin (covers site builders like Wix that nest
-//    embeds in intermediate frames; Chromium/Safari)
-// 2. document.referrer hostname (Firefox fallback)
-// 3. explicit ?div=N (for sites whose domain names no division)
 function divisionFromHost(host) {
   const match = /div(?:ision)?[-_]?([1-7])(?![0-9])/i.exec(host ?? "");
   return match ? Number(match[1]) : null;
@@ -36,7 +34,6 @@ function divisionFromHost(host) {
 function detectDivision() {
   const origins = location.ancestorOrigins;
   if (origins) {
-    // Walk outward; the top-most ancestor is the real site domain.
     for (let i = origins.length - 1; i >= 0; i--) {
       try {
         const host = new URL(origins[i]).hostname;
@@ -61,52 +58,101 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v4";
+const VERSION = "v5";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
 const status = document.getElementById("status");
 const listEl = document.getElementById("list");
-const divTag = document.getElementById("div-tag");
+const divLine = document.getElementById("div-line");
+const logoEl = document.getElementById("logo");
+const submitBar = document.getElementById("submit-bar");
+const submitBtn = document.getElementById("submit-btn");
+const overlay = document.getElementById("overlay");
 const foot = document.getElementById("foot");
-foot.textContent = `Live results · One vote per person · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
+foot.textContent = `Live results · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
 
 let board = { byDivision: {}, votes: new Map() };
-let demoChoice = null;
+let picks = new Set();
+let submitted = false;
+
+function initials(name) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
 
 function demoBoard() {
-  const names = [
-    "Don Garlits",
-    "Shirley Muldowney",
-    "John Force",
-    "Bob Glidden",
-    "Kenny Bernstein",
-    "Warren Johnson",
-    "Joe Amato",
-  ].map((name, i) => ({ id: `demo-${i}`, name }));
-  const byDivision = {};
-  byDivision[division] = names;
-  const votes = new Map([
-    ["demo-0", { [division]: 214 }],
-    ["demo-1", { [division]: 198 }],
-    ["demo-2", { [division]: 171 }],
-    ["demo-3", { [division]: 96 }],
-    ["demo-4", { [division]: 61 }],
-    ["demo-5", { [division]: 44 }],
-    ["demo-6", { [division]: 23 }],
-  ]);
+  const legends = [
+    ["Don Garlits", "Driver — Top Fuel pioneer, 144 national event wins.", 214],
+    ["Shirley Muldowney", "First woman licensed in Top Fuel; three-time champion.", 198],
+    ["John Force", "16-time Funny Car world champion.", 171],
+    ["Bob Glidden", "Pro Stock's winningest driver of his era.", 96],
+    ["Kenny Bernstein", "First to break 300 mph.", 61],
+    ["Warren Johnson", "The Professor of Pro Stock.", 44],
+    ["Joe Amato", "Five-time Top Fuel champion.", 23],
+  ];
+  const names = legends.map(([name, bio], i) => ({
+    id: `demo-${i}`,
+    name,
+    bio,
+    photoUrl: "",
+    category: "Driver",
+  }));
+  const byDivision = { [division]: names };
+  const votes = new Map(
+    legends.map(([, , count], i) => [`demo-${i}`, { [division]: count }])
+  );
   return { byDivision, votes };
 }
 
+function showBio(entry) {
+  const card = document.createElement("div");
+  card.className = "bio-card";
+  if (entry.photoUrl) {
+    const img = document.createElement("img");
+    img.src = entry.photoUrl;
+    img.alt = entry.name;
+    card.append(img);
+  }
+  const h3 = document.createElement("h3");
+  h3.textContent = entry.name;
+  card.append(h3);
+  if (entry.category) {
+    const cat = document.createElement("div");
+    cat.className = "cat";
+    cat.textContent = entry.category;
+    card.append(cat);
+  }
+  const p = document.createElement("p");
+  p.textContent = entry.bio || "No bio yet.";
+  card.append(p);
+  const close = document.createElement("button");
+  close.textContent = "Close";
+  close.addEventListener("click", () => overlay.classList.add("hidden"));
+  card.append(close);
+  overlay.replaceChildren(card);
+  overlay.classList.remove("hidden");
+}
+overlay.addEventListener("click", (e) => {
+  if (e.target === overlay) overlay.classList.add("hidden");
+});
+
 function render() {
-  const voted = DEMO ? demoChoice !== null : hasVoted(division);
-  const choice = DEMO ? demoChoice : votedFor(division);
-  const rows = (board.byDivision[division] ?? [])
-    .map((entry) => ({
-      ...entry,
-      count: divisionCount(board.votes, entry.id, division),
-    }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const voted = submitted || (DEMO ? false : hasVoted(division));
+  const mine = new Set(DEMO && submitted ? picks : votedFor(division));
+  if (submitted) picks.forEach((p) => mine.add(p));
+
+  let rows = (board.byDivision[division] ?? []).map((entry) => ({
+    ...entry,
+    count: divisionCount(board.votes, entry.id, division),
+  }));
+  rows = voted
+    ? rows.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    : rows.sort((a, b) => a.name.localeCompare(b.name));
   const total = rows.reduce((sum, r) => sum + r.count, 0);
 
   if (rows.length === 0) {
@@ -119,81 +165,145 @@ function render() {
       ...rows.map((entry, i) => {
         const rank = i + 1;
         const pct = total > 0 ? Math.round((entry.count / total) * 100) : 0;
-        const chosen = entry.id === choice;
+        const isMine = voted ? mine.has(entry.id) : picks.has(entry.id);
 
         const li = document.createElement("li");
         li.className =
-          "row" + (chosen ? " chosen" : "") + (rank <= 3 ? ` r${rank}` : "");
+          "row" +
+          (isMine ? " picked" : "") +
+          (voted && rank <= 3 ? ` r${rank}` : "");
 
         const fill = document.createElement("div");
         fill.className = "fill";
-        requestAnimationFrame(() => {
-          fill.style.width = `${pct}%`;
-        });
+        if (voted) {
+          requestAnimationFrame(() => {
+            fill.style.width = `${pct}%`;
+          });
+        }
+        li.append(fill);
 
-        const rankEl = document.createElement("span");
-        rankEl.className = "rank";
-        rankEl.textContent = String(rank);
+        if (voted) {
+          const medal = document.createElement("span");
+          medal.className = "rank-medal";
+          medal.textContent = String(rank);
+          li.append(medal);
+        }
 
-        const name = document.createElement("span");
+        const avatar = document.createElement("span");
+        avatar.className = "avatar";
+        if (entry.photoUrl) {
+          const img = document.createElement("img");
+          img.src = entry.photoUrl;
+          img.alt = "";
+          img.loading = "lazy";
+          avatar.append(img);
+        } else {
+          avatar.textContent = initials(entry.name);
+        }
+        li.append(avatar);
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const name = document.createElement("div");
         name.className = "name";
         name.textContent = entry.name;
+        info.append(name);
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const bits = [];
+        if (entry.category) bits.push(entry.category);
+        meta.textContent = bits.join(" · ");
+        if (entry.bio || entry.photoUrl) {
+          const bioLink = document.createElement("span");
+          bioLink.className = "bio-link";
+          bioLink.textContent = (bits.length ? " · " : "") + "View bio";
+          bioLink.addEventListener("click", (e) => {
+            e.stopPropagation();
+            showBio(entry);
+          });
+          meta.append(bioLink);
+        }
+        info.append(meta);
+        li.append(info);
 
-        const count = document.createElement("span");
-        count.className = "count";
         if (voted) {
+          const count = document.createElement("span");
+          count.className = "count";
           const b = document.createElement("b");
           b.textContent = String(entry.count);
           count.append(b, `${pct}%`);
+          li.append(count);
+        } else {
+          const box = document.createElement("span");
+          box.className = "pick-box";
+          box.textContent = "✓";
+          li.append(box);
+          li.addEventListener("click", () => togglePick(entry.id));
         }
 
-        const button = document.createElement("button");
-        button.className = "vote-btn";
-        button.textContent = chosen ? "✓ Voted" : "Vote";
-        button.disabled = voted;
-        button.addEventListener("click", () => vote(entry.id));
-
-        li.append(fill, rankEl, name, count, button);
         return li;
       })
     );
   }
 
   if (voted) {
+    submitBar.classList.add("hidden");
     status.innerHTML = "";
     const b = document.createElement("b");
     b.textContent = "Thanks for voting!";
-    status.append(
-      b,
-      ` ${total} vote${total === 1 ? "" : "s"} cast in Division ${division} — results are live.`
-    );
+    status.append(b, ` ${total} vote${total === 1 ? "" : "s"} cast — live results below.`);
   } else {
-    status.textContent = "Vote for your division's legend — one pick per person.";
+    submitBar.classList.remove("hidden");
+    const n = picks.size;
+    status.textContent = `Pick your top ${MAX_PICKS} legends — ${n} of ${MAX_PICKS} selected.`;
+    submitBtn.disabled = n === 0;
+    submitBtn.textContent =
+      n === 0 ? `Pick up to ${MAX_PICKS}` : `Submit ${n} vote${n === 1 ? "" : "s"}`;
   }
 }
 
-async function vote(id) {
+function togglePick(id) {
+  if (picks.has(id)) {
+    picks.delete(id);
+  } else if (picks.size < MAX_PICKS) {
+    picks.add(id);
+  } else {
+    status.textContent = `That's ${MAX_PICKS} already — tap a picked name to swap it.`;
+    return;
+  }
+  render();
+}
+
+submitBtn.addEventListener("click", async () => {
+  if (picks.size === 0) return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Submitting…";
   if (DEMO) {
-    demoChoice = id;
-    const perName = board.votes.get(id) ?? {};
-    perName[division] = (perName[division] ?? 0) + 1;
-    board.votes.set(id, perName);
+    for (const id of picks) {
+      const perName = board.votes.get(id) ?? {};
+      perName[division] = (perName[division] ?? 0) + 1;
+      board.votes.set(id, perName);
+    }
+    submitted = true;
     render();
     return;
   }
   try {
-    await voteFor(id, division);
-    markVoted(division, id);
+    await castVotes([...picks], division);
+    markVoted(division, [...picks]);
+    submitted = true;
     render();
   } catch (err) {
     console.error("Vote failed:", err);
-    status.textContent = "Could not record your vote — please try again.";
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Try again";
+    status.textContent = "Could not record your votes — please try again.";
   }
-}
+});
 
 function renderDivisionChooser() {
-  divTag.textContent = "Vote";
-  status.textContent = "Choose your division:";
+  divLine.textContent = "Choose your division";
+  status.textContent = "";
   const li = document.createElement("li");
   li.className = "choose";
   for (const d of DIVISIONS) {
@@ -208,12 +318,15 @@ function renderDivisionChooser() {
 }
 
 if (!DIVISIONS.includes(division)) {
-  // Referrer was missing or didn't identify a division site — let the
-  // visitor pick, so the widget still works anywhere.
   renderDivisionChooser();
 } else {
-  divTag.textContent = `Division ${division}`;
-  document.title = `Legend Vote — Division ${division}`;
+  divLine.textContent = `of the ${DIVISION_NAMES[division]}`;
+  document.title = `'51 Legends — ${DIVISION_NAMES[division]}`;
+  if (!DEMO) {
+    loadDivisionAssets(division).then((assets) => {
+      if (assets.logo75) logoEl.src = assets.logo75;
+    });
+  }
   if (DEMO) {
     board = demoBoard();
     render();

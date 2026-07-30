@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0d0d13" />
-    <title>Legend Vote</title>
+    <title>'51 Legends — Vote</title>
+    <link rel="icon" type="image/png" href="/nhra-75-logo-small.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,24 +15,40 @@
       :root {
         color-scheme: dark;
         --font: "Oswald", -apple-system, system-ui, sans-serif;
-        --font-display: "Oswald", system-ui, sans-serif;
+        --font-serif: "Playfair Display", Georgia, serif;
         --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
         --bg: #000000;
-        --bg-2: #111117;
         --surface: rgba(255, 255, 255, 0.05);
-        --surface-2: rgba(255, 255, 255, 0.08);
-        --border-s: rgba(255, 255, 255, 0.08);
+        --surface-2: rgba(255, 255, 255, 0.09);
+        --surface-3: rgba(255, 255, 255, 0.13);
         --accent: #e30613;
         --accent-2: #ff2a36;
         --accent-3: #ff8a91;
         --accent-glow: rgba(227, 6, 19, 0.35);
+        --gold: #f5c542;
         --text: #fafafb;
         --text-2: #cdcdd6;
         --text-3: #a3a3b0;
         --text-4: #74747f;
-        --r-lg: 20px;
-        --r-md: 14px;
-        --r-sm: 10px;
+        --r-lg: 18px;
+        --r-md: 13px;
+        --r-sm: 9px;
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+          0 10px 26px rgba(0, 0, 0, 0.45);
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f4f3f0;
+        --surface: rgba(20, 20, 30, 0.05);
+        --surface-2: rgba(20, 20, 30, 0.08);
+        --surface-3: rgba(20, 20, 30, 0.12);
+        --accent-glow: rgba(227, 6, 19, 0.2);
+        --text: #17171c;
+        --text-2: #3c3c46;
+        --text-3: #5d5d68;
+        --text-4: #8c8c96;
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.7) inset,
+          0 10px 26px rgba(20, 20, 30, 0.09);
       }
       * {
         box-sizing: border-box;
@@ -41,137 +57,65 @@
         margin: 0;
         font-family: var(--font);
         background:
-          radial-gradient(900px 420px at 50% -8%, rgba(227, 6, 19, 0.12), transparent 65%),
+          radial-gradient(640px 300px at 50% -10%, var(--accent-glow), transparent 65%),
           var(--bg);
         color: var(--text);
         min-height: 100vh;
       }
-      .wrap {
+      .widget {
+        padding: 1.2rem 1.1rem 5.2rem;
         max-width: 44rem;
         margin: 0 auto;
-        padding: 0 1.1rem 4rem;
       }
-      header {
+      /* Header */
+      .head {
         text-align: center;
-        padding: 3.2rem 0 1.6rem;
-      }
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-family: var(--font-mono);
-        font-size: 0.68rem;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: var(--accent-3);
-        background: rgba(227, 6, 19, 0.1);
-        padding: 0.35rem 0.9rem;
-        border-radius: 999px;
         margin-bottom: 1rem;
       }
-      .pill i {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--accent-2);
-        box-shadow: 0 0 10px var(--accent-glow);
+      .logo {
+        max-height: 110px;
+        max-width: 78%;
+        width: auto;
+        filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+        margin-bottom: 0.5rem;
       }
-      h1 {
-        font-family: var(--font-display);
-        font-size: clamp(2.4rem, 7vw, 3.5rem);
-        line-height: 1.03;
-        margin: 0 0 0.55rem;
+      .head h1 {
+        margin: 0;
+        font-size: 1.35rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
       }
-      h1 em {
+      .head h1 em {
         font-style: normal;
         color: var(--accent-2);
       }
-      .subtitle {
+      .head .div-line {
+        font-family: var(--font-serif);
+        font-style: italic;
         color: var(--text-3);
-        margin: 0;
-      }
-      #status {
-        text-align: center;
-        color: var(--text-3);
-        margin: 1rem 0;
-        min-height: 1.3em;
-      }
-      /* Division picker */
-      .divisions {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-        gap: 0.7rem;
-        margin-top: 1rem;
-      }
-      .division-card {
-        display: block;
-        text-decoration: none;
-        color: var(--text);
-        background: var(--surface);
-        border-radius: var(--r-lg);
-        padding: 1.2rem 1.1rem 1.1rem;
-        transition: background 0.15s ease, box-shadow 0.15s ease;
-      }
-      .division-card:hover {
-        background: var(--surface-2);
-        box-shadow: 0 0 24px var(--accent-glow);
-      }
-      .division-card .num {
-        font-family: var(--font-display);
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--accent-2);
-      }
-      .division-card .lbl {
-        font-family: var(--font-mono);
-        font-size: 0.7rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--text-3);
+        font-size: 0.95rem;
         margin-top: 0.2rem;
       }
-      /* Vote board */
-      .board-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin: 0.5rem 0 0.9rem;
-      }
-      .div-tag {
-        font-family: var(--font-mono);
-        font-size: 0.72rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--accent-3);
-        background: rgba(227, 6, 19, 0.12);
-        padding: 0.3rem 0.75rem;
+      .rule {
+        height: 2px;
         border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--accent) 25%, var(--accent) 75%, transparent);
+        margin: 0.9rem 0;
       }
-      a.back {
-        color: var(--text-3);
-        font-size: 0.85rem;
-        text-decoration: none;
+      #status {
+        color: var(--text-2);
+        font-size: 0.92rem;
+        letter-spacing: 0.03em;
+        min-height: 1.2em;
+        margin: 0 0 0.85rem;
+        text-align: center;
       }
-      a.back:hover {
-        color: var(--text);
+      #status b {
+        color: var(--accent-3);
+        font-weight: 600;
       }
-      #search {
-        width: 100%;
-        font: inherit;
-        padding: 0.75rem 1rem;
-        border-radius: var(--r-md);
-        border: none;
-        background: var(--surface);
-        color: var(--text);
-        margin-bottom: 0.8rem;
-      }
-      #search::placeholder {
-        color: var(--text-4);
-      }
+      /* Cards */
       #list {
         list-style: none;
         margin: 0;
@@ -186,122 +130,278 @@
         gap: 0.8rem;
         background: var(--surface);
         border-radius: var(--r-md);
-        padding: 0.8rem 1rem;
-        transition: background 0.15s ease;
+        padding: 0.65rem 0.8rem;
+        box-shadow: var(--shadow-card);
+        transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
         overflow: hidden;
+        cursor: pointer;
+        user-select: none;
       }
       .row:hover {
         background: var(--surface-2);
+        transform: translateY(-1px);
       }
-      .row.chosen {
-        box-shadow: inset 3px 0 0 var(--accent), 0 0 24px var(--accent-glow);
+      .row.picked {
         background: var(--surface-2);
+        box-shadow: inset 0 0 0 2px var(--accent), 0 0 22px var(--accent-glow),
+          var(--shadow-card);
       }
       .fill {
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-          90deg,
-          rgba(227, 6, 19, 0.18),
-          rgba(227, 6, 19, 0.03)
-        );
-        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+        width: 0;
+        background: linear-gradient(90deg, rgba(227, 6, 19, 0.22), rgba(227, 6, 19, 0.02));
+        transition: width 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
         pointer-events: none;
       }
-      .rank {
+      .avatar {
         position: relative;
-        font-family: var(--font-mono);
-        font-size: 0.78rem;
-        color: var(--text-4);
-        width: 1.6rem;
-        text-align: right;
+        width: 3rem;
+        height: 3rem;
+        border-radius: var(--r-sm);
         flex-shrink: 0;
+        object-fit: cover;
+        background: var(--surface-3);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text-3);
+        letter-spacing: 0.04em;
+        overflow: hidden;
       }
-      .row.r1 .rank { color: #f5c542; }
-      .row.r2 .rank { color: #c0c8d8; }
-      .row.r3 .rank { color: #d08a4e; }
-      .name {
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .info {
         position: relative;
         flex: 1;
         min-width: 0;
+      }
+      .name {
         font-weight: 600;
+        font-size: 1.02rem;
+        letter-spacing: 0.02em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      .meta {
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-4);
+        margin-top: 0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .meta .bio-link {
+        color: var(--accent-3);
+      }
       .count {
         position: relative;
         font-family: var(--font-mono);
-        font-size: 0.8rem;
+        font-size: 0.72rem;
         color: var(--text-3);
+        text-align: right;
         white-space: nowrap;
       }
-      .vote-btn {
+      .count b {
+        display: block;
+        font-size: 0.95rem;
+        color: var(--text-2);
+        font-weight: 500;
+      }
+      .pick-box {
         position: relative;
-        font-family: var(--font-display);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 0.75rem;
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: var(--r-sm);
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        background: var(--surface-3);
+        color: transparent;
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .row.picked .pick-box {
         background: var(--accent);
         color: #fff;
-        cursor: pointer;
-        transition: box-shadow 0.15s ease, background 0.15s ease;
       }
-      .vote-btn:hover:not(:disabled) {
-        background: var(--accent-2);
-        box-shadow: 0 0 20px var(--accent-glow);
+      .rank-medal {
+        position: relative;
+        font-family: var(--font-mono);
+        font-size: 0.74rem;
+        font-weight: 700;
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--surface-3);
+        color: var(--text-3);
+        flex-shrink: 0;
       }
-      .vote-btn:disabled {
-        background: var(--surface-2);
-        color: var(--text-4);
-        cursor: default;
-      }
+      .row.r1 .rank-medal { background: var(--gold); color: #211a00; }
+      .row.r2 .rank-medal { background: #c9d1e0; color: #1c2029; }
+      .row.r3 .rank-medal { background: #d08a4e; color: #241300; }
       .empty {
         color: var(--text-3);
         text-align: center;
-        padding: 2rem 0;
+        padding: 1.8rem 0;
+        font-size: 0.9rem;
       }
-      footer {
-        text-align: center;
-        color: var(--text-4);
-        font-family: var(--font-mono);
-        font-size: 0.68rem;
+      .choose {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.45rem;
+      }
+      .choose a {
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        font-size: 0.85rem;
+        text-decoration: none;
+        color: #fff;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        padding: 0.55rem 1rem;
+        border-radius: var(--r-sm);
+      }
+      /* Submit bar */
+      .submit-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
+        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.75) 40%);
+        pointer-events: none;
+      }
+      :root[data-theme="light"] .submit-bar {
+        background: linear-gradient(180deg, transparent, rgba(244, 243, 240, 0.9) 40%);
+      }
+      .submit-btn {
+        pointer-events: auto;
+        font-family: var(--font);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.85rem;
+        padding: 0.8rem 2.2rem;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent-2), var(--accent));
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 0 6px 24px var(--accent-glow);
+        transition: filter 0.15s ease, opacity 0.15s ease;
+      }
+      .submit-btn:hover:not(:disabled) {
+        filter: brightness(1.12);
+      }
+      .submit-btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      /* Bio overlay */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: grid;
+        place-items: center;
+        padding: 1.2rem;
+        z-index: 50;
+      }
+      .bio-card {
+        background: #121216;
+        border-radius: var(--r-lg);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 60px rgba(0, 0, 0, 0.6);
+        max-width: 26rem;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 1.2rem 1.2rem 1.3rem;
+        color: #fafafb;
+      }
+      .bio-card img {
+        width: 100%;
+        max-height: 15rem;
+        object-fit: cover;
+        border-radius: var(--r-md);
+        margin-bottom: 0.8rem;
+      }
+      .bio-card h3 {
+        margin: 0 0 0.15rem;
+        font-size: 1.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .bio-card .cat {
+        font-size: 0.72rem;
         letter-spacing: 0.1em;
         text-transform: uppercase;
-        margin-top: 3rem;
+        color: var(--accent-3);
+        margin-bottom: 0.6rem;
+      }
+      .bio-card p {
+        font-family: var(--font-serif);
+        line-height: 1.55;
+        color: #cdcdd6;
+        margin: 0 0 1rem;
+        white-space: pre-wrap;
+      }
+      .bio-card button {
+        font-family: var(--font);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        padding: 0.55rem 1.4rem;
+        border: none;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+      }
+      .foot {
+        margin-top: 1rem;
+        font-size: 0.6rem;
+        color: var(--text-4);
+        text-align: center;
+        font-family: var(--font-mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
       }
       .hidden {
-        display: none;
+        display: none !important;
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <header>
-        <span class="pill"><i></i>Live · One vote per person</span>
-        <h1>Legend <em>Vote</em></h1>
-        <p class="subtitle" id="subtitle">Select your division to cast your vote.</p>
-      </header>
-
-      <p id="status"></p>
-
-      <div id="picker" class="divisions hidden"></div>
-
-      <div id="board" class="hidden">
-        <div class="board-head">
-          <a class="back" href="./">← All divisions</a>
-          <span class="div-tag" id="div-tag"></span>
-        </div>
-        <input id="search" type="search" placeholder="Search names…" autocomplete="off" />
-        <ul id="list"></ul>
+    <div class="widget">
+      <div class="head">
+        <img class="logo" id="logo" src="/nhra-75-logo.png" alt="'51 Legends" />
+        <h1>Vote for the <em>'51 Legends</em></h1>
+        <div class="div-line" id="div-line">&nbsp;</div>
       </div>
-
-      <footer>NHRA · Legend Vote</footer>
+      <div class="rule"></div>
+      <p id="status">Loading…</p>
+      <ul id="list"></ul>
+      <div class="submit-bar hidden" id="submit-bar">
+        <button class="submit-btn" id="submit-btn" disabled>Submit votes</button>
+      </div>
+      <div class="foot" id="foot">Live results</div>
     </div>
-    <script type="module" src="/src/main.js"></script>
+    <div class="overlay hidden" id="overlay"></div>
+    <script type="module" src="/src/embed.js"></script>
   </body>
 </html>

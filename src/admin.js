@@ -5,18 +5,27 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
+import {
+  getDownloadURL,
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+} from "firebase/storage";
 import * as XLSX from "xlsx";
 import { app } from "./firebase.js";
 import {
   DIVISIONS,
   addNames,
   divisionCount,
+  loadDivisionAssets,
   removeName,
+  saveName,
   totalCount,
   watchBoard,
 } from "./names.js";
 
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 const status = document.getElementById("status");
 const authSection = document.getElementById("auth-section");
@@ -29,13 +38,61 @@ const headRow = document.getElementById("head-row");
 const namesBody = document.getElementById("names-body");
 const countLine = document.getElementById("count-line");
 const snippetsEl = document.getElementById("snippets");
+const statNames = document.getElementById("stat-names");
+const statNoms = document.getElementById("stat-noms");
+const statVotes = document.getElementById("stat-votes");
+const logoEl = document.getElementById("logo");
+
+const editorOverlay = document.getElementById("editor-overlay");
+const editorTitle = document.getElementById("editor-title");
+const editorPreview = document.getElementById("editor-preview");
+const editorName = document.getElementById("editor-name");
+const editorBio = document.getElementById("editor-bio");
+const editorPhotoUrl = document.getElementById("editor-photo-url");
+const editorPhotoFile = document.getElementById("editor-photo-file");
+const editorStatus = document.getElementById("editor-status");
 
 let board = { byDivision: {}, votes: new Map() };
 let stopWatching = null;
+let editingId = null;
+
+loadDivisionAssets("default").then((assets) => {
+  if (assets.logo75) logoEl.src = assets.logo75;
+});
+
+function initials(name) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
+
+function unionCandidates() {
+  const union = new Map();
+  for (const d of DIVISIONS) {
+    for (const entry of board.byDivision[d] ?? []) {
+      const existing = union.get(entry.id);
+      if (!existing) {
+        union.set(entry.id, { ...entry });
+      } else {
+        if (!existing.photoUrl && entry.photoUrl) existing.photoUrl = entry.photoUrl;
+        if (!existing.bio && entry.bio) existing.bio = entry.bio;
+        for (const docId of entry.nominationDocIds) {
+          if (!existing.nominationDocIds.includes(docId)) {
+            existing.nominationDocIds.push(docId);
+          }
+        }
+      }
+    }
+  }
+  return union;
+}
 
 function renderHead() {
   headRow.replaceChildren(
-    ...["Name", ...DIVISIONS.map((d) => `D${d}`), "Total", ""].map(
+    ...["Candidate", ...DIVISIONS.map((d) => `D${d}`), "Total", ""].map(
       (label, i) => {
         const th = document.createElement("th");
         th.textContent = label;
@@ -47,27 +104,53 @@ function renderHead() {
 }
 
 function renderNames() {
-  const union = new Map();
-  for (const d of DIVISIONS) {
-    for (const entry of board.byDivision[d] ?? []) {
-      union.set(entry.id, entry);
-    }
-  }
+  const union = unionCandidates();
   const rows = [...union.values()]
-    .map((entry) => ({
-      ...entry,
-      total: totalCount(board.votes, entry.id),
-    }))
+    .map((entry) => ({ ...entry, total: totalCount(board.votes, entry.id) }))
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
-  countLine.textContent = `${rows.length} name${rows.length === 1 ? "" : "s"}, ${grandTotal} vote${grandTotal === 1 ? "" : "s"} across all divisions.`;
+  const nomCount = rows.reduce((sum, r) => sum + r.nominationDocIds.length, 0);
+
+  statNames.textContent = String(rows.length);
+  statNoms.textContent = String(nomCount);
+  statVotes.textContent = String(grandTotal);
+  countLine.textContent = `Sorted by total votes. Click Edit to add a bio or photo.`;
 
   namesBody.replaceChildren(
     ...rows.map((entry) => {
       const tr = document.createElement("tr");
 
       const nameTd = document.createElement("td");
-      nameTd.textContent = entry.name;
+      const cand = document.createElement("div");
+      cand.className = "cand";
+      const thumb = document.createElement("span");
+      thumb.className = "thumb";
+      if (entry.photoUrl) {
+        const img = document.createElement("img");
+        img.src = entry.photoUrl;
+        img.alt = "";
+        img.loading = "lazy";
+        thumb.append(img);
+      } else {
+        thumb.textContent = initials(entry.name);
+      }
+      const who = document.createElement("div");
+      who.className = "who";
+      const nm = document.createElement("div");
+      nm.className = "nm";
+      nm.textContent = entry.name;
+      const extra = document.createElement("div");
+      extra.className = "extra";
+      const bits = [];
+      if (entry.category) bits.push(entry.category);
+      if (entry.nominationDocIds.length) {
+        bits.push(`${entry.nominationDocIds.length} nomination${entry.nominationDocIds.length === 1 ? "" : "s"}`);
+      }
+      if (entry.bio) bits.push("bio ✓");
+      extra.textContent = bits.join(" · ");
+      who.append(nm, extra);
+      cand.append(thumb, who);
+      nameTd.append(cand);
       tr.append(nameTd);
 
       for (const d of DIVISIONS) {
@@ -84,12 +167,16 @@ function renderNames() {
       tr.append(totalTd);
 
       const actionTd = document.createElement("td");
+      const edit = document.createElement("button");
+      edit.className = "btn secondary small";
+      edit.textContent = "Edit";
+      edit.addEventListener("click", () => openEditor(entry));
       const del = document.createElement("button");
       del.className = "btn danger";
       del.textContent = "Remove";
+      del.style.marginLeft = "0.4rem";
       del.addEventListener("click", async () => {
-        if (!confirm(`Remove "${entry.name}" and its votes in all divisions?`))
-          return;
+        if (!confirm(`Remove "${entry.name}" everywhere (votes and nominations included)?`)) return;
         try {
           await removeName(entry.id, entry.nominationDocIds);
         } catch (err) {
@@ -97,7 +184,7 @@ function renderNames() {
           alert("Could not remove that name — check your access and try again.");
         }
       });
-      actionTd.append(del);
+      actionTd.append(edit, del);
       tr.append(actionTd);
 
       return tr;
@@ -105,15 +192,81 @@ function renderNames() {
   );
 }
 
+/* ---------- Editor ---------- */
+
+function openEditor(entry) {
+  editingId = entry.id;
+  editorTitle.textContent = `Edit — ${entry.name}`;
+  editorName.value = entry.name;
+  editorBio.value = entry.bio ?? "";
+  editorPhotoUrl.value = entry.photoUrl ?? "";
+  editorStatus.textContent = "";
+  updatePreview();
+  editorOverlay.classList.remove("hidden");
+}
+
+function updatePreview() {
+  const url = editorPhotoUrl.value.trim();
+  editorPreview.src = url;
+  editorPreview.style.display = url ? "block" : "none";
+}
+editorPhotoUrl.addEventListener("input", updatePreview);
+
+editorPhotoFile.addEventListener("change", async () => {
+  const file = editorPhotoFile.files?.[0];
+  if (!file || !editingId) return;
+  editorStatus.textContent = "Uploading photo…";
+  try {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const ref = storageRef(storage, `candidates/${editingId}.${ext}`);
+    const snap = await uploadBytes(ref, file);
+    editorPhotoUrl.value = await getDownloadURL(snap.ref);
+    updatePreview();
+    editorStatus.textContent = "Photo uploaded — click Save to apply.";
+  } catch (err) {
+    console.error("Upload failed:", err);
+    editorStatus.textContent =
+      "Upload failed — check Storage rules allow the admin to write.";
+  } finally {
+    editorPhotoFile.value = "";
+  }
+});
+
+document.getElementById("editor-cancel").addEventListener("click", () => {
+  editorOverlay.classList.add("hidden");
+  editingId = null;
+});
+editorOverlay.addEventListener("click", (e) => {
+  if (e.target === editorOverlay) editorOverlay.classList.add("hidden");
+});
+
+document.getElementById("editor-save").addEventListener("click", async () => {
+  if (!editingId) return;
+  editorStatus.textContent = "Saving…";
+  try {
+    await saveName(editingId, {
+      name: editorName.value.trim() || undefined,
+      bio: editorBio.value.trim(),
+      photoUrl: editorPhotoUrl.value.trim(),
+    });
+    editorOverlay.classList.add("hidden");
+    editingId = null;
+  } catch (err) {
+    console.error("Save failed:", err);
+    editorStatus.textContent =
+      "Save failed — make sure you're the admin in the security rules.";
+  }
+});
+
+/* ---------- Iframe creator ---------- */
+
 function snippetRow(html, label) {
   const row = document.createElement("div");
   row.className = "snippet";
-
   const code = document.createElement("code");
   code.textContent = html;
-
   const copy = document.createElement("button");
-  copy.className = "btn secondary";
+  copy.className = "btn secondary small";
   copy.textContent = label;
   copy.addEventListener("click", async () => {
     try {
@@ -124,7 +277,6 @@ function snippetRow(html, label) {
     }
     setTimeout(() => (copy.textContent = label), 1500);
   });
-
   row.append(code, copy);
   return row;
 }
@@ -132,12 +284,12 @@ function snippetRow(html, label) {
 function renderSnippets() {
   const base = `${location.origin}/embed.html`;
   const style =
-    "width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13";
+    "width:100%;max-width:560px;height:760px;border:0;border-radius:16px;background:#000";
 
   const universalNote = document.createElement("p");
   universalNote.className = "hint";
   universalNote.textContent =
-    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, nhradiv2.com → Division 2, …) and shows that division's ballot automatically:";
+    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, …) and shows that division's ballot automatically. Add ?theme=light for light-colored sites.";
 
   const overrideNote = document.createElement("p");
   overrideNote.className = "hint";
@@ -147,18 +299,20 @@ function renderSnippets() {
   snippetsEl.replaceChildren(
     universalNote,
     snippetRow(
-      `<iframe src="${base}" title="Legend Vote" style="${style}"></iframe>`,
+      `<iframe src="${base}" title="'51 Legends Vote" style="${style}"></iframe>`,
       "Copy universal"
     ),
     overrideNote,
     ...DIVISIONS.map((d) =>
       snippetRow(
-        `<iframe src="${base}?div=${d}" title="Legend Vote — Division ${d}" style="${style}"></iframe>`,
+        `<iframe src="${base}?div=${d}" title="'51 Legends Vote — Division ${d}" style="${style}"></iframe>`,
         `Copy D${d}`
       )
     )
   );
 }
+
+/* ---------- Bulk add ---------- */
 
 async function bulkAdd(labels, sourceLabel) {
   const cleaned = labels.map((l) => String(l ?? "").trim()).filter(Boolean);
@@ -210,6 +364,8 @@ fileInput.addEventListener("change", async () => {
     fileInput.value = "";
   }
 });
+
+/* ---------- Auth ---------- */
 
 document.getElementById("sign-in").addEventListener("click", async () => {
   try {
