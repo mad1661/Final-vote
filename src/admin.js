@@ -99,33 +99,58 @@ function renderNames() {
   );
 }
 
+function snippetRow(html, label) {
+  const row = document.createElement("div");
+  row.className = "snippet";
+
+  const code = document.createElement("code");
+  code.textContent = html;
+
+  const copy = document.createElement("button");
+  copy.className = "btn secondary";
+  copy.textContent = label;
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(html);
+      copy.textContent = "Copied!";
+    } catch {
+      copy.textContent = "Select & copy";
+    }
+    setTimeout(() => (copy.textContent = label), 1500);
+  });
+
+  row.append(code, copy);
+  return row;
+}
+
 function renderSnippets() {
   const base = `${location.origin}/embed.html`;
+  const style =
+    "width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13";
+
+  const universalNote = document.createElement("p");
+  universalNote.className = "hint";
+  universalNote.textContent =
+    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, nhradiv2.com → Division 2, …) and shows that division's ballot automatically:";
+
+  const overrideNote = document.createElement("p");
+  overrideNote.className = "hint";
+  overrideNote.textContent =
+    "If a site's domain doesn't contain its division number, use its pinned snippet instead:";
+
   snippetsEl.replaceChildren(
-    ...DIVISIONS.map((d) => {
-      const row = document.createElement("div");
-      row.className = "snippet";
-
-      const code = document.createElement("code");
-      const html = `<iframe src="${base}?div=${d}" title="Legend Vote — Division ${d}" style="width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13"></iframe>`;
-      code.textContent = html;
-
-      const copy = document.createElement("button");
-      copy.className = "btn secondary";
-      copy.textContent = `Copy D${d}`;
-      copy.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(html);
-          copy.textContent = "Copied!";
-        } catch {
-          copy.textContent = "Select & copy";
-        }
-        setTimeout(() => (copy.textContent = `Copy D${d}`), 1500);
-      });
-
-      row.append(code, copy);
-      return row;
-    })
+    universalNote,
+    snippetRow(
+      `<iframe src="${base}" title="Legend Vote" style="${style}"></iframe>`,
+      "Copy universal"
+    ),
+    overrideNote,
+    ...DIVISIONS.map((d) =>
+      snippetRow(
+        `<iframe src="${base}?div=${d}" title="Legend Vote — Division ${d}" style="${style}"></iframe>`,
+        `Copy D${d}`
+      )
+    )
   );
 }
 

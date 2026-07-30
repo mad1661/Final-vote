@@ -72,17 +72,23 @@ Visitors can read and cast +1 votes; only the admin can manage names.
 
 ## Embedding in division sites
 
-The admin page generates copy-paste snippets. They look like:
+One universal snippet works on every division site — the widget detects the
+division from the embedding site's domain (`nhradiv1.com` → Division 1,
+`nhradiv2.com` → Division 2, … any `div<1-7>`/`division<1-7>` in the
+hostname):
 
 ```html
 <iframe
-  src="https://legendvote-final.web.app/embed.html?div=3"
-  title="Legend Vote — Division 3"
+  src="https://legendvote-final.web.app/embed.html"
+  title="Legend Vote"
   style="width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13"
 ></iframe>
 ```
 
-Change `div=` to the division number (1–7).
+If a site's domain doesn't contain its division number, pin it explicitly
+with `embed.html?div=N` (the admin page has copy buttons for both forms).
+If neither the URL nor the domain identifies a division, the widget shows a
+division chooser so it still works anywhere.
 
 ## Deploy
 

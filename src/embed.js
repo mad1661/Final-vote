@@ -9,8 +9,25 @@ import {
   watchBoard,
 } from "./names.js";
 
-const params = new URLSearchParams(location.search);
-const division = Number(params.get("div"));
+// Division resolution, in priority order:
+// 1. explicit ?div=N on the embed URL (manual override)
+// 2. the embedding site's domain via document.referrer — division sites
+//    follow the pattern nhradiv1.com … nhradiv7.com, so any "div<1-7>"
+//    (or "division<1-7>") in the parent hostname decides it
+function detectDivision() {
+  const fromParam = Number(new URLSearchParams(location.search).get("div"));
+  if (DIVISIONS.includes(fromParam)) return fromParam;
+  try {
+    const host = new URL(document.referrer).hostname;
+    const match = /div(?:ision)?[-_]?([1-7])/i.exec(host);
+    if (match) return Number(match[1]);
+  } catch {
+    // no or unparsable referrer — fall through
+  }
+  return null;
+}
+
+const division = detectDivision();
 
 const status = document.getElementById("status");
 const listEl = document.getElementById("list");
@@ -85,10 +102,31 @@ async function vote(id) {
   }
 }
 
+function renderDivisionChooser() {
+  divTag.textContent = "Select division";
+  status.textContent = "Choose your division to vote:";
+  const li = document.createElement("li");
+  li.style.display = "flex";
+  li.style.flexWrap = "wrap";
+  li.style.gap = "0.4rem";
+  li.style.listStyle = "none";
+  for (const d of DIVISIONS) {
+    const a = document.createElement("a");
+    a.className = "vote-btn";
+    a.style.textDecoration = "none";
+    a.textContent = `D${d}`;
+    const url = new URL(location.href);
+    url.searchParams.set("div", String(d));
+    a.href = url.toString();
+    li.append(a);
+  }
+  listEl.replaceChildren(li);
+}
+
 if (!DIVISIONS.includes(division)) {
-  divTag.textContent = "Invalid division";
-  status.textContent =
-    "This embed needs a division number, e.g. embed.html?div=3";
+  // Referrer was missing or didn't identify a division site — let the
+  // visitor pick, so the widget still works anywhere.
+  renderDivisionChooser();
 } else if (app) {
   divTag.textContent = `Division ${division}`;
   document.title = `Legend Vote — Division ${division}`;
