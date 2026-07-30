@@ -91,11 +91,21 @@
         color: var(--accent-2);
       }
       .head .div-line {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
         font-family: var(--font-serif);
         font-style: italic;
         color: var(--text-3);
         font-size: 0.95rem;
-        margin-top: 0.2rem;
+        margin-top: 0.35rem;
+      }
+      .div-badge {
+        height: 46px;
+        width: auto;
+        filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.5));
+        display: none;
       }
       .rule {
         height: 2px;
@@ -391,7 +401,10 @@
       <div class="head">
         <img class="logo" id="logo" src="/nhra-75-logo.png" alt="'51 Legends" />
         <h1>Vote for the <em>'51 Legends</em></h1>
-        <div class="div-line" id="div-line">&nbsp;</div>
+        <div class="div-line" id="div-line-wrap">
+          <img class="div-badge" id="div-badge" alt="" />
+          <span id="div-line">&nbsp;</span>
+        </div>
       </div>
       <div class="rule"></div>
       <p id="status">Loading…</p>

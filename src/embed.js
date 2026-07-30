@@ -322,9 +322,20 @@ if (!DIVISIONS.includes(division)) {
 } else {
   divLine.textContent = `of the ${DIVISION_NAMES[division]}`;
   document.title = `'51 Legends — ${DIVISION_NAMES[division]}`;
+  // Division badge (D1..D7 images hosted alongside the nomination app),
+  // preferring the small variant and falling back to the full-size one.
+  const badge = document.getElementById("div-badge");
+  badge.src = `/D${division}-small.png`;
+  badge.onerror = () => {
+    badge.onerror = null;
+    badge.src = `/D${division}.PNG`;
+    badge.onerror = () => (badge.style.display = "none");
+  };
+  badge.onload = () => (badge.style.display = "block");
   if (!DEMO) {
     loadDivisionAssets(division).then((assets) => {
       if (assets.logo75) logoEl.src = assets.logo75;
+      if (assets.logo) badge.src = assets.logo;
     });
   }
   if (DEMO) {
