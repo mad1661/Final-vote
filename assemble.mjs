@@ -51,5 +51,14 @@ inject(
     pill("/admin.html", "Site Admin"),
   ])
 );
+inject(
+  "dist/vote-admin.html",
+  nav([
+    pill("/", "Home"),
+    pill("/vote", "Vote", true),
+    pill("/admin.html", "Site Admin"),
+    pill("/asset-manager.html", "Assets"),
+  ])
+);
 
 console.log("assembled: original site + vote pages + nav links");
