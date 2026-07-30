@@ -183,7 +183,22 @@ function renderDupes() {
   const list = document.getElementById("dupes-list");
   const union = unionCandidates();
   const groups = findDuplicateGroups([...union.values()]);
-  section.classList.toggle("hidden", groups.length === 0);
+  section.classList.remove("hidden");
+  if (groups.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent =
+      "No possible duplicates detected right now. New nominations are checked automatically.";
+    const reset = document.createElement("button");
+    reset.className = "btn secondary small";
+    reset.textContent = "Re-check cleared names";
+    reset.addEventListener("click", () => {
+      localStorage.removeItem(DISMISSED_PAIRS_KEY);
+      renderDupes();
+    });
+    list.replaceChildren(empty, reset);
+    return;
+  }
   list.replaceChildren(
     ...groups.map((group) => {
       const box = document.createElement("div");
