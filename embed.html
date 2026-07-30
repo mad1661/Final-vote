@@ -251,19 +251,21 @@
         background: var(--surface-3);
         overflow: hidden;
       }
-      .avatar img {
+      .avatar img.bg {
+        position: absolute;
+        inset: -8%;
+        width: 116%;
+        height: 116%;
+        object-fit: cover;
+        filter: blur(14px) saturate(1.05) brightness(0.65);
+      }
+      .avatar img.fg {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
-        object-fit: cover;
-        /* bias the crop toward faces near the top of portrait shots */
-        object-position: center 18%;
-        display: block;
-      }
-      .avatar img.contain {
-        /* very wide/tall images fit inside the tile instead of cropping */
         object-fit: contain;
-        object-position: center;
-        background: rgba(0, 0, 0, 0.45);
+        z-index: 1;
       }
       .info {
         position: absolute;

@@ -59,7 +59,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v8";
+const VERSION = "v9";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -118,8 +118,10 @@ function smartTrim(img) {
     out.getContext("2d").drawImage(img, sx, sy, cw, ch, 0, 0, cw, ch);
     out.toBlob((blob) => {
       if (!blob) return;
-      img.classList.remove("contain");
-      img.src = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      for (const el of img.parentElement?.querySelectorAll("img") ?? [img]) {
+        el.src = url;
+      }
     }, "image/jpeg", 0.92);
   } catch {
     // canvas tainted (no CORS on that host) or draw failure — leave as-is
@@ -292,15 +294,19 @@ function render() {
         const avatar = document.createElement("span");
         avatar.className = "avatar";
         if (entry.photoUrl) {
+          const bg = document.createElement("img");
+          bg.className = "bg";
+          bg.alt = "";
+          bg.loading = "lazy";
+          bg.src = entry.photoUrl;
           const img = document.createElement("img");
+          img.className = "fg";
           img.crossOrigin = "anonymous";
           img.src = entry.photoUrl;
           img.alt = "";
           img.loading = "lazy";
           let trimmed = false;
           img.addEventListener("load", () => {
-            const ratio = img.naturalWidth / img.naturalHeight;
-            if (ratio > 1.7 || ratio < 0.55) img.classList.add("contain");
             if (!trimmed) {
               trimmed = true;
               smartTrim(img);
@@ -313,10 +319,11 @@ function render() {
               img.src = entry.photoUrl;
               return;
             }
+            bg.remove();
             img.remove();
             avatar.textContent = initials(entry.name);
           });
-          avatar.append(img);
+          avatar.append(bg, img);
         } else {
           avatar.textContent = initials(entry.name);
         }
