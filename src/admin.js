@@ -18,6 +18,7 @@ import { app } from "./firebase.js";
 import {
   DIVISIONS,
   addNames,
+  addNominations,
   clearCollection,
   divisionCount,
   getNominations,
@@ -803,11 +804,71 @@ document.getElementById("add-pasted").addEventListener("click", () => {
   });
 });
 
+// Header-name matching for the structured nomination sheet.
+const SHEET_COLUMNS = {
+  nomineeName: "nominee name",
+  category: "category",
+  yearsActive: "years active",
+  reason: "reason",
+  nominatorName: "nominator name",
+  nominatorEmail: "nominator email",
+  division: "division",
+  divisionName: "division name",
+  photoUrl: "photo url",
+  submitted: "submitted",
+};
+
+function parseStructuredSheet(workbook) {
+  const rows = [];
+  for (const sheetName of workbook.SheetNames) {
+    const grid = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      header: 1,
+      blankrows: false,
+    });
+    if (!grid.length) continue;
+    const headers = grid[0].map((c) => String(c ?? "").trim().toLowerCase());
+    if (!headers.includes(SHEET_COLUMNS.nomineeName)) continue;
+    const idx = {};
+    for (const [key, label] of Object.entries(SHEET_COLUMNS)) {
+      idx[key] = headers.indexOf(label);
+    }
+    for (const row of grid.slice(1)) {
+      const entry = {};
+      for (const [key, i] of Object.entries(idx)) {
+        entry[key] = i >= 0 ? row[i] : "";
+      }
+      // fall back to the dropdown when a row has no division of its own
+      if (!Number(entry.division)) {
+        entry.division = Number(bulkDivision.value) || 0;
+      }
+      if (String(entry.nomineeName ?? "").trim()) rows.push(entry);
+    }
+  }
+  return rows;
+}
+
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
   try {
     const workbook = XLSX.read(await file.arrayBuffer());
+
+    // Structured nomination sheet (Nominee Name / Category / Reason / …)
+    const structured = parseStructuredSheet(workbook);
+    if (structured.length) {
+      const divisions = [...new Set(structured.map((r) => Number(r.division)).filter(Boolean))];
+      bulkStatus.textContent = `Importing ${structured.length} nomination${structured.length === 1 ? "" : "s"}…`;
+      const added = await addNominations(structured);
+      const skipped = structured.length - added;
+      bulkStatus.textContent =
+        `Done — ${added} nomination${added === 1 ? "" : "s"} imported from ${file.name}` +
+        ` (division${divisions.length === 1 ? "" : "s"} ${divisions.join(", ") || "?"})` +
+        (skipped ? `; ${skipped} row${skipped === 1 ? "" : "s"} skipped (no valid division — pick one in the dropdown and re-upload)` : "") +
+        ". Re-uploading the same sheet updates instead of duplicating.";
+      return;
+    }
+
+    // Plain list of names — original behavior
     const labels = [];
     for (const sheetName of workbook.SheetNames) {
       const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {

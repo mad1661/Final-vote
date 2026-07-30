@@ -178,6 +178,46 @@ export async function saveName(id, { name, bio, photoUrl }) {
   );
 }
 
+// Admin: bulk-import full nomination rows (the Excel export format:
+// Nominee Name / Category / Years Active / Reason / Nominator Name /
+// Nominator Email / Division / Division Name / Photo URL / Submitted).
+// Doc ids are deterministic per (division, nominee, nominator) so
+// re-uploading the same sheet updates rather than duplicates.
+export async function addNominations(rows) {
+  const entries = [];
+  for (const row of rows) {
+    const name = String(row.nomineeName ?? "").trim();
+    const division = Number(row.division);
+    if (!name || !DIVISIONS.includes(division)) continue;
+    const who = slugify(String(row.nominatorName ?? "")) || "curated";
+    entries.push({
+      id: `xls_${division}_${slugify(name)}__${who}`,
+      data: {
+        nomineeName: name,
+        category: String(row.category ?? "").trim(),
+        yearsActive: String(row.yearsActive ?? "").trim(),
+        reason: String(row.reason ?? "").trim(),
+        nominatorName: String(row.nominatorName ?? "").trim(),
+        nominatorEmail: String(row.nominatorEmail ?? "").trim(),
+        division: String(division),
+        divisionName: String(row.divisionName ?? DIVISION_NAMES[division] ?? "").trim(),
+        photoUrl: String(row.photoUrl ?? "").trim(),
+        photoPath: "",
+        submittedAt: String(row.submitted ?? "").trim(),
+        importedAt: serverTimestamp(),
+      },
+    });
+  }
+  for (let i = 0; i < entries.length; i += 450) {
+    const batch = writeBatch(db);
+    for (const { id, data } of entries.slice(i, i + 450)) {
+      batch.set(doc(NOMINATIONS, id), data, { merge: true });
+    }
+    await batch.commit();
+  }
+  return entries.length;
+}
+
 // Admin: fetch full nomination docs for a candidate (for review/un-merge).
 export async function getNominations(ids) {
   const out = [];
