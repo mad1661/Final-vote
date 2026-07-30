@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Legend Vote</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --font: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", ui-monospace, monospace;
+        --bg: #0d0d13;
+        --bg-2: #111117;
+        --surface: rgba(255, 255, 255, 0.05);
+        --surface-2: rgba(255, 255, 255, 0.08);
+        --border-s: rgba(255, 255, 255, 0.08);
+        --accent: #dc2626;
+        --accent-2: #ef4444;
+        --accent-3: #fca5a5;
+        --accent-glow: rgba(220, 38, 38, 0.35);
+        --text: #fafafb;
+        --text-2: #cdcdd6;
+        --text-3: #a3a3b0;
+        --text-4: #74747f;
+        --r-lg: 20px;
+        --r-md: 14px;
+        --r-sm: 10px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+      }
+      .widget {
+        padding: 1.1rem 1.1rem 1.3rem;
+        max-width: 34rem;
+        margin: 0 auto;
+      }
+      .head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.35rem;
+      }
+      .title {
+        font-family: var(--font-display);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 1.15rem;
+      }
+      .title em {
+        font-style: normal;
+        color: var(--accent-2);
+      }
+      .div-tag {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        color: var(--accent-3);
+        background: rgba(220, 38, 38, 0.12);
+        padding: 0.25rem 0.6rem;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      #status {
+        color: var(--text-3);
+        font-size: 0.85rem;
+        min-height: 1.2em;
+        margin: 0 0 0.75rem;
+      }
+      #list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.45rem;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        background: var(--surface);
+        border-radius: var(--r-md);
+        padding: 0.6rem 0.75rem;
+        transition: background 0.15s ease;
+        overflow: hidden;
+      }
+      .row:hover {
+        background: var(--surface-2);
+      }
+      .row.chosen {
+        box-shadow: inset 3px 0 0 var(--accent), 0 0 20px var(--accent-glow);
+        background: var(--surface-2);
+      }
+      .fill {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(220, 38, 38, 0.18),
+          rgba(220, 38, 38, 0.04)
+        );
+        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+        pointer-events: none;
+      }
+      .name {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .count {
+        position: relative;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--text-3);
+        white-space: nowrap;
+      }
+      .vote-btn {
+        position: relative;
+        font-family: var(--font-display);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+        padding: 0.45rem 0.85rem;
+        border: none;
+        border-radius: var(--r-sm);
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        transition: box-shadow 0.15s ease, background 0.15s ease;
+      }
+      .vote-btn:hover:not(:disabled) {
+        background: var(--accent-2);
+        box-shadow: 0 0 20px var(--accent-glow);
+      }
+      .vote-btn:disabled {
+        background: var(--surface-2);
+        color: var(--text-4);
+        cursor: default;
+      }
+      .empty {
+        color: var(--text-3);
+        text-align: center;
+        padding: 1.5rem 0;
+        font-size: 0.9rem;
+      }
+      .foot {
+        margin-top: 0.8rem;
+        font-size: 0.7rem;
+        color: var(--text-4);
+        text-align: center;
+        font-family: var(--font-mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="widget">
+      <div class="head">
+        <span class="title">Legend <em>Vote</em></span>
+        <span class="div-tag" id="div-tag">Division —</span>
+      </div>
+      <p id="status">Loading…</p>
+      <ul id="list"></ul>
+      <div class="foot" id="foot">Live results · One vote per person</div>
+    </div>
+    <script type="module" src="/src/embed.js"></script>
+  </body>
+</html>

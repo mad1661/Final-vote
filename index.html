@@ -3,13 +3,305 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Final Vote</title>
+    <meta name="theme-color" content="#0d0d13" />
+    <title>Legend Vote</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --font: "Inter", -apple-system, system-ui, sans-serif;
+        --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", ui-monospace, monospace;
+        --bg: #0d0d13;
+        --bg-2: #111117;
+        --surface: rgba(255, 255, 255, 0.05);
+        --surface-2: rgba(255, 255, 255, 0.08);
+        --border-s: rgba(255, 255, 255, 0.08);
+        --accent: #dc2626;
+        --accent-2: #ef4444;
+        --accent-3: #fca5a5;
+        --accent-glow: rgba(220, 38, 38, 0.35);
+        --text: #fafafb;
+        --text-2: #cdcdd6;
+        --text-3: #a3a3b0;
+        --text-4: #74747f;
+        --r-lg: 20px;
+        --r-md: 14px;
+        --r-sm: 10px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        background:
+          radial-gradient(900px 420px at 50% -8%, rgba(220, 38, 38, 0.12), transparent 65%),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 0 1.1rem 4rem;
+      }
+      header {
+        text-align: center;
+        padding: 3.2rem 0 1.6rem;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent-3);
+        background: rgba(220, 38, 38, 0.1);
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        margin-bottom: 1rem;
+      }
+      .pill i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        box-shadow: 0 0 10px var(--accent-glow);
+      }
+      h1 {
+        font-family: var(--font-display);
+        font-size: clamp(2.4rem, 7vw, 3.5rem);
+        line-height: 1.03;
+        margin: 0 0 0.55rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      h1 em {
+        font-style: normal;
+        color: var(--accent-2);
+      }
+      .subtitle {
+        color: var(--text-3);
+        margin: 0;
+      }
+      #status {
+        text-align: center;
+        color: var(--text-3);
+        margin: 1rem 0;
+        min-height: 1.3em;
+      }
+      /* Division picker */
+      .divisions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+        gap: 0.7rem;
+        margin-top: 1rem;
+      }
+      .division-card {
+        display: block;
+        text-decoration: none;
+        color: var(--text);
+        background: var(--surface);
+        border-radius: var(--r-lg);
+        padding: 1.2rem 1.1rem 1.1rem;
+        transition: background 0.15s ease, box-shadow 0.15s ease;
+      }
+      .division-card:hover {
+        background: var(--surface-2);
+        box-shadow: 0 0 24px var(--accent-glow);
+      }
+      .division-card .num {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent-2);
+      }
+      .division-card .lbl {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text-3);
+        margin-top: 0.2rem;
+      }
+      /* Vote board */
+      .board-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin: 0.5rem 0 0.9rem;
+      }
+      .div-tag {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent-3);
+        background: rgba(220, 38, 38, 0.12);
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+      }
+      a.back {
+        color: var(--text-3);
+        font-size: 0.85rem;
+        text-decoration: none;
+      }
+      a.back:hover {
+        color: var(--text);
+      }
+      #search {
+        width: 100%;
+        font: inherit;
+        padding: 0.75rem 1rem;
+        border-radius: var(--r-md);
+        border: none;
+        background: var(--surface);
+        color: var(--text);
+        margin-bottom: 0.8rem;
+      }
+      #search::placeholder {
+        color: var(--text-4);
+      }
+      #list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 0.55rem;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        background: var(--surface);
+        border-radius: var(--r-md);
+        padding: 0.8rem 1rem;
+        transition: background 0.15s ease;
+        overflow: hidden;
+      }
+      .row:hover {
+        background: var(--surface-2);
+      }
+      .row.chosen {
+        box-shadow: inset 3px 0 0 var(--accent), 0 0 24px var(--accent-glow);
+        background: var(--surface-2);
+      }
+      .fill {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(220, 38, 38, 0.18),
+          rgba(220, 38, 38, 0.03)
+        );
+        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+        pointer-events: none;
+      }
+      .rank {
+        position: relative;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--text-4);
+        width: 1.6rem;
+        text-align: right;
+        flex-shrink: 0;
+      }
+      .row.r1 .rank { color: #f5c542; }
+      .row.r2 .rank { color: #c0c8d8; }
+      .row.r3 .rank { color: #d08a4e; }
+      .name {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .count {
+        position: relative;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--text-3);
+        white-space: nowrap;
+      }
+      .vote-btn {
+        position: relative;
+        font-family: var(--font-display);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: var(--r-sm);
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        transition: box-shadow 0.15s ease, background 0.15s ease;
+      }
+      .vote-btn:hover:not(:disabled) {
+        background: var(--accent-2);
+        box-shadow: 0 0 20px var(--accent-glow);
+      }
+      .vote-btn:disabled {
+        background: var(--surface-2);
+        color: var(--text-4);
+        cursor: default;
+      }
+      .empty {
+        color: var(--text-3);
+        text-align: center;
+        padding: 2rem 0;
+      }
+      footer {
+        text-align: center;
+        color: var(--text-4);
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-top: 3rem;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
   </head>
   <body>
-    <main>
-      <h1>Final Vote</h1>
-      <p id="status">Connecting to Firebase…</p>
-    </main>
+    <div class="wrap">
+      <header>
+        <span class="pill"><i></i>Live · One vote per person</span>
+        <h1>Legend <em>Vote</em></h1>
+        <p class="subtitle" id="subtitle">Select your division to cast your vote.</p>
+      </header>
+
+      <p id="status"></p>
+
+      <div id="picker" class="divisions hidden"></div>
+
+      <div id="board" class="hidden">
+        <div class="board-head">
+          <a class="back" href="./">← All divisions</a>
+          <span class="div-tag" id="div-tag"></span>
+        </div>
+        <input id="search" type="search" placeholder="Search names…" autocomplete="off" />
+        <ul id="list"></ul>
+      </div>
+
+      <footer>NHRA · Legend Vote</footer>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
