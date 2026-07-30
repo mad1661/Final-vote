@@ -545,6 +545,23 @@
         </section>
 
         <section>
+          <h2>Start fresh</h2>
+          <p class="hint">
+            Rebuild the ballots from the original submissions. Restore fixes
+            every nomination whose name was changed by a merge or move
+            (recovered from the uploaded photo's filename — nominations
+            without photos keep their current name). The other two buttons
+            optionally clear admin overrides and vote tallies.
+          </p>
+          <div class="row">
+            <button id="restore-noms" class="btn">Restore names from original submissions</button>
+            <button id="clear-names" class="btn secondary">Clear admin-added names &amp; bios</button>
+            <button id="clear-votes" class="btn danger">Reset ALL votes to zero</button>
+          </div>
+          <p id="fresh-status" class="hint"></p>
+        </section>
+
+        <section>
           <h2>Iframe creator — embed codes for division sites</h2>
           <div id="snippets"></div>
         </section>

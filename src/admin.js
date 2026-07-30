@@ -18,12 +18,14 @@ import { app } from "./firebase.js";
 import {
   DIVISIONS,
   addNames,
+  clearCollection,
   divisionCount,
   getNominations,
   loadDivisionAssets,
   mergeCandidates,
   reassignNomination,
   removeName,
+  restoreFromSubmissions,
   saveName,
   totalCount,
   watchBoard,
@@ -644,6 +646,47 @@ document.getElementById("editor-save").addEventListener("click", async () => {
     console.error("Save failed:", err);
     editorStatus.textContent =
       "Save failed — make sure you're the admin in the security rules.";
+  }
+});
+
+/* ---------- Start fresh ---------- */
+
+const freshStatus = document.getElementById("fresh-status");
+
+document.getElementById("restore-noms").addEventListener("click", async () => {
+  if (!confirm("Restore every nomination's name to what was originally submitted? This undoes merges and moves for nominations that have photos.")) return;
+  freshStatus.textContent = "Restoring…";
+  try {
+    const n = await restoreFromSubmissions();
+    freshStatus.textContent = `Done — ${n} nomination${n === 1 ? "" : "s"} restored to the submitted name. Duplicates will reappear in the finder above.`;
+  } catch (err) {
+    console.error("Restore failed:", err);
+    freshStatus.textContent = "Restore failed — check your admin access.";
+  }
+});
+
+document.getElementById("clear-names").addEventListener("click", async () => {
+  if (!confirm("Delete ALL admin-added names, bios, and photo overrides? Nominations are not touched.")) return;
+  freshStatus.textContent = "Clearing…";
+  try {
+    const n = await clearCollection("names");
+    freshStatus.textContent = `Done — ${n} admin name record${n === 1 ? "" : "s"} cleared.`;
+  } catch (err) {
+    console.error("Clear failed:", err);
+    freshStatus.textContent = "Clear failed — check your admin access.";
+  }
+});
+
+document.getElementById("clear-votes").addEventListener("click", async () => {
+  if (!confirm("Reset ALL votes in ALL divisions to zero? This cannot be undone.")) return;
+  if (!confirm("Are you sure? Every vote cast so far will be permanently deleted.")) return;
+  freshStatus.textContent = "Resetting votes…";
+  try {
+    const n = await clearCollection("votes");
+    freshStatus.textContent = `Done — ${n} vote tallies deleted. Everyone starts at zero.`;
+  } catch (err) {
+    console.error("Vote reset failed:", err);
+    freshStatus.textContent = "Vote reset failed — check your admin access.";
   }
 });
 

@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   updateDoc,
   increment,
   onSnapshot,
@@ -191,6 +192,47 @@ export async function getNominations(ids) {
 // un-merge tool. The ballot rebuilds from nominations automatically.
 export async function reassignNomination(docId, newName) {
   await updateDoc(doc(NOMINATIONS, docId), { nomineeName: newName.trim() });
+}
+
+// Admin: restore every nomination's nominee name to what was originally
+// submitted, recovered from the uploaded photo's filename (the submission
+// app embeds the typed name in it). Undoes merges/moves for any
+// nomination that has a photo. Returns how many were restored.
+export async function restoreFromSubmissions() {
+  const snap = await getDocs(NOMINATIONS);
+  const fixes = [];
+  snap.forEach((ds) => {
+    const data = ds.data();
+    const m = /_(.+)\.[A-Za-z0-9]+$/.exec(data.photoPath ?? "");
+    if (!m) return;
+    const original = m[1].replaceAll("_", " ").trim();
+    if (original && slugify(original) !== slugify(data.nomineeName ?? "")) {
+      fixes.push([ds.id, original]);
+    }
+  });
+  for (let i = 0; i < fixes.length; i += 450) {
+    const batch = writeBatch(db);
+    for (const [id, name] of fixes.slice(i, i + 450)) {
+      batch.update(doc(NOMINATIONS, id), { nomineeName: name });
+    }
+    await batch.commit();
+  }
+  return fixes.length;
+}
+
+// Admin: wipe an entire collection (names overrides or votes) in chunks.
+export async function clearCollection(name) {
+  const snap = await getDocs(collection(db, name));
+  const ids = [];
+  snap.forEach((d) => ids.push(d.id));
+  for (let i = 0; i < ids.length; i += 450) {
+    const batch = writeBatch(db);
+    for (const id of ids.slice(i, i + 450)) {
+      batch.delete(doc(db, name, id));
+    }
+    await batch.commit();
+  }
+  return ids.length;
 }
 
 // Division branding ('51 Legends logos etc.) from the nomination app's
