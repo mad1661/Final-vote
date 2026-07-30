@@ -28,29 +28,37 @@ function detectDivision() {
     // Walk outward; the top-most ancestor is the real site domain.
     for (let i = origins.length - 1; i >= 0; i--) {
       try {
-        const found = divisionFromHost(new URL(origins[i]).hostname);
-        if (found) return found;
+        const host = new URL(origins[i]).hostname;
+        const found = divisionFromHost(host);
+        if (found) return { division: found, source: `site: ${host}` };
       } catch {
         // opaque/invalid origin — keep looking
       }
     }
   }
   try {
-    const found = divisionFromHost(new URL(document.referrer).hostname);
-    if (found) return found;
+    const host = new URL(document.referrer).hostname;
+    const found = divisionFromHost(host);
+    if (found) return { division: found, source: `ref: ${host}` };
   } catch {
     // no or unparsable referrer — fall through
   }
   const fromParam = Number(new URLSearchParams(location.search).get("div"));
-  if (DIVISIONS.includes(fromParam)) return fromParam;
-  return null;
+  if (DIVISIONS.includes(fromParam)) {
+    return { division: fromParam, source: "pinned in snippet" };
+  }
+  return { division: null, source: "no signal" };
 }
 
-const division = detectDivision();
+const VERSION = "v3";
+const detected = detectDivision();
+const division = detected.division;
 
 const status = document.getElementById("status");
 const listEl = document.getElementById("list");
 const divTag = document.getElementById("div-tag");
+const foot = document.getElementById("foot");
+foot.textContent = `Live results · One vote per person · ${VERSION} · ${detected.source}`;
 
 let board = { names: [], votes: new Map() };
 
