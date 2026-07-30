@@ -438,8 +438,17 @@
       </header>
       <p id="status">Loading…</p>
 
-      <section id="auth-section">
-        <button id="sign-in" class="btn">Sign in with Google</button>
+      <section id="auth-section" style="max-width: 24rem; margin-left: auto; margin-right: auto">
+        <button id="sign-in" class="btn" style="width: 100%">Sign in with Google</button>
+        <p class="hint" style="text-align: center; margin: 0.8rem 0 0.5rem">— or with email &amp; password —</p>
+        <div class="field">
+          <input id="auth-email" type="email" placeholder="Email" autocomplete="username" />
+        </div>
+        <div class="field">
+          <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
+        </div>
+        <button id="sign-in-email" class="btn secondary" style="width: 100%">Sign in</button>
+        <p id="auth-error" class="hint" style="text-align: center; color: #ff8a91"></p>
       </section>
 
       <div id="admin-ui" class="hidden">

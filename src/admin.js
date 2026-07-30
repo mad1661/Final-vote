@@ -2,7 +2,9 @@ import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
 } from "firebase/auth";
 import {
@@ -787,14 +789,54 @@ fileInput.addEventListener("change", async () => {
 
 /* ---------- Auth ---------- */
 
+const authError = document.getElementById("auth-error");
+
 document.getElementById("sign-in").addEventListener("click", async () => {
+  authError.textContent = "";
   try {
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (err) {
-    console.error("Sign-in failed:", err);
-    status.textContent =
-      "Sign-in failed. Make sure Google sign-in is enabled in Firebase Authentication.";
+    console.error("Google sign-in failed:", err);
+    if (
+      err?.code === "auth/popup-blocked" ||
+      err?.code === "auth/popup-closed-by-user" ||
+      err?.code === "auth/cancelled-popup-request"
+    ) {
+      // popup blockers: fall back to full-page redirect flow
+      try {
+        await signInWithRedirect(auth, new GoogleAuthProvider());
+        return;
+      } catch (err2) {
+        console.error("Redirect sign-in failed:", err2);
+      }
+    }
+    authError.textContent = `Google sign-in failed (${err?.code ?? "unknown"}).`;
   }
+});
+
+document.getElementById("sign-in-email").addEventListener("click", async () => {
+  authError.textContent = "";
+  const email = document.getElementById("auth-email").value.trim();
+  const password = document.getElementById("auth-password").value;
+  if (!email || !password) {
+    authError.textContent = "Enter your email and password.";
+    return;
+  }
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    console.error("Email sign-in failed:", err);
+    const msgs = {
+      "auth/invalid-credential": "Wrong email or password.",
+      "auth/user-not-found": "No account with that email — add it in Firebase Authentication → Users.",
+      "auth/operation-not-allowed": "Email/password sign-in isn't enabled in Firebase Authentication yet.",
+      "auth/too-many-requests": "Too many attempts — wait a minute and try again.",
+    };
+    authError.textContent = msgs[err?.code] ?? `Sign-in failed (${err?.code ?? "unknown"}).`;
+  }
+});
+document.getElementById("auth-password").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("sign-in-email").click();
 });
 
 document.getElementById("sign-out").addEventListener("click", () => signOut(auth));
