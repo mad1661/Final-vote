@@ -495,6 +495,38 @@ document.getElementById("editor-save").addEventListener("click", async () => {
   }
 });
 
+/* ---------- Export ---------- */
+
+document.getElementById("export-csv").addEventListener("click", () => {
+  const union = unionCandidates();
+  const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+  const lines = [
+    ["Name", "Category", ...DIVISIONS.map((d) => `D${d} votes`), "Total votes", "Nominations", "Divisions"].map(esc).join(","),
+  ];
+  const rows = [...union.values()].sort(
+    (a, b) => totalCount(board.votes, b.id) - totalCount(board.votes, a.id)
+  );
+  for (const entry of rows) {
+    lines.push(
+      [
+        entry.name,
+        entry.category,
+        ...DIVISIONS.map((d) => divisionCount(board.votes, entry.id, d)),
+        totalCount(board.votes, entry.id),
+        entry.nominationDocIds.length,
+        entry.memberships.join(" "),
+      ].map(esc).join(",")
+    );
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.download = `legend-vote-results-${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
 /* ---------- Iframe creator ---------- */
 
 function snippetRow(html, label) {
