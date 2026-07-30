@@ -19,15 +19,6 @@ if (params.get("theme") === "light") {
   document.documentElement.dataset.theme = "light";
 }
 
-// Compact header when running inside an iframe so the embed uses its
-// space for the ballot, not the masthead.
-try {
-  if (window.self !== window.top) {
-    document.documentElement.classList.add("in-frame");
-  }
-} catch {
-  document.documentElement.classList.add("in-frame");
-}
 
 // Demo mode renders sample legends without touching Firestore, so the
 // widget can be previewed before any names are loaded: embed.html?demo=1
