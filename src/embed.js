@@ -341,6 +341,20 @@ if (!DIVISIONS.includes(division)) {
 } else {
   divLine.textContent = `of the ${DIVISION_NAMES[division]}`;
   document.title = `'51 Legends — ${DIVISION_NAMES[division]}`;
+  // Main logo: the '51 Legends sponsor shield. Tries the division-specific
+  // file, then a shared one, then divisionAssets/75th logo fallbacks.
+  let logoLocked = false;
+  const logoFallbacks = [`/51-legends.png`, `/nhra-75-logo.png`];
+  logoEl.onload = () => {
+    logoLocked = !logoEl.src.endsWith("/nhra-75-logo.png");
+  };
+  logoEl.onerror = () => {
+    const next = logoFallbacks.shift();
+    if (next) logoEl.src = next;
+    else logoEl.onerror = null;
+  };
+  logoEl.src = `/51-legends-d${division}.png`;
+
   // Division badge (D1..D7 images hosted alongside the nomination app),
   // preferring the small variant and falling back to the full-size one.
   const badge = document.getElementById("div-badge");
@@ -353,7 +367,7 @@ if (!DIVISIONS.includes(division)) {
   badge.onload = () => (badge.style.display = "block");
   if (!DEMO) {
     loadDivisionAssets(division).then((assets) => {
-      if (assets.logo75) logoEl.src = assets.logo75;
+      if (assets.logo75 && !logoLocked) logoEl.src = assets.logo75;
       if (assets.logo) badge.src = assets.logo;
     });
   }
