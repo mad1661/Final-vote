@@ -17,8 +17,10 @@ import {
   DIVISIONS,
   addNames,
   divisionCount,
+  getNominations,
   loadDivisionAssets,
   mergeCandidates,
+  reassignNomination,
   removeName,
   saveName,
   totalCount,
@@ -431,6 +433,67 @@ document.getElementById("merge-btn").addEventListener("click", async () => {
 
 /* ---------- Editor ---------- */
 
+function originalNameHint(nom) {
+  // the uploaded photo's filename preserves the name as submitted
+  const m = /_(.+)\.[A-Za-z0-9]+$/.exec(nom.photoPath ?? "");
+  return m ? m[1].replaceAll("_", " ") : "";
+}
+
+async function renderEditorNoms(entry) {
+  const box = document.getElementById("editor-noms");
+  box.textContent = "Loading nominations…";
+  const noms = await getNominations(entry.nominationDocIds);
+  if (noms.length === 0) {
+    box.textContent = "No nomination records (admin-added name).";
+    return;
+  }
+  box.replaceChildren(
+    ...noms.map((nom) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.cssText = "align-items:center;background:rgba(0,0,0,0.3);border-radius:9px;padding:0.45rem 0.55rem;margin-top:0.4rem";
+      if (nom.photoUrl) {
+        const img = document.createElement("img");
+        img.src = nom.photoUrl;
+        img.style.cssText = "width:2rem;height:2rem;object-fit:cover;border-radius:6px";
+        row.append(img);
+      }
+      const info = document.createElement("span");
+      info.style.cssText = "flex:1;min-width:0;font-size:0.78rem;color:var(--text-3)";
+      const hint = originalNameHint(nom);
+      info.textContent = [
+        `D${nom.division}`,
+        nom.nominatorName || "anonymous",
+        hint && hint.toLowerCase() !== (nom.nomineeName ?? "").toLowerCase()
+          ? `submitted as: ${hint}`
+          : "",
+      ].filter(Boolean).join(" · ");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "Move to name…";
+      input.value = "";
+      input.style.cssText = "width:11rem;padding:0.35rem 0.5rem;border:none;border-radius:7px;background:rgba(0,0,0,0.45);color:var(--text)";
+      const move = document.createElement("button");
+      move.className = "btn secondary small";
+      move.textContent = "Move";
+      move.addEventListener("click", async () => {
+        const to = input.value.trim();
+        if (!to) return;
+        if (!confirm(`Move this nomination to "${to}"? They become (or join) their own candidate.`)) return;
+        try {
+          await reassignNomination(nom.id, to);
+          row.remove();
+        } catch (err) {
+          console.error("Move failed:", err);
+          alert("Move failed — check your admin access.");
+        }
+      });
+      row.append(info, input, move);
+      return row;
+    })
+  );
+}
+
 function openEditor(entry) {
   editingId = entry.id;
   editorTitle.textContent = `Edit — ${entry.name}`;
@@ -440,6 +503,10 @@ function openEditor(entry) {
   editorStatus.textContent = "";
   updatePreview();
   editorOverlay.classList.remove("hidden");
+  renderEditorNoms(entry).catch((err) => {
+    console.error("Nomination load failed:", err);
+    document.getElementById("editor-noms").textContent = "Could not load nominations.";
+  });
 }
 
 function updatePreview() {

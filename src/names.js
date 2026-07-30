@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  updateDoc,
   increment,
   onSnapshot,
   serverTimestamp,
@@ -174,6 +175,22 @@ export async function saveName(id, { name, bio, photoUrl }) {
     },
     { merge: true }
   );
+}
+
+// Admin: fetch full nomination docs for a candidate (for review/un-merge).
+export async function getNominations(ids) {
+  const out = [];
+  for (const id of ids) {
+    const snap = await getDoc(doc(NOMINATIONS, id));
+    if (snap.exists()) out.push({ id, ...snap.data() });
+  }
+  return out;
+}
+
+// Admin: move one nomination to a (possibly new) nominee name — the
+// un-merge tool. The ballot rebuilds from nominations automatically.
+export async function reassignNomination(docId, newName) {
+  await updateDoc(doc(NOMINATIONS, docId), { nomineeName: newName.trim() });
 }
 
 // Division branding ('51 Legends logos etc.) from the nomination app's
