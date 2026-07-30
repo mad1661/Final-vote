@@ -250,6 +250,14 @@ function render() {
           img.src = entry.photoUrl;
           img.alt = "";
           img.loading = "lazy";
+          img.addEventListener("load", () => {
+            const ratio = img.naturalWidth / img.naturalHeight;
+            if (ratio > 1.7 || ratio < 0.55) img.classList.add("contain");
+          });
+          img.addEventListener("error", () => {
+            img.remove();
+            avatar.textContent = initials(entry.name);
+          });
           avatar.append(img);
         } else {
           avatar.textContent = initials(entry.name);
