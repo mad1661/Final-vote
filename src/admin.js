@@ -79,8 +79,9 @@ function unionCandidates() {
     for (const entry of board.byDivision[d] ?? []) {
       const existing = union.get(entry.id);
       if (!existing) {
-        union.set(entry.id, { ...entry });
+        union.set(entry.id, { ...entry, memberships: [d] });
       } else {
+        existing.memberships.push(d);
         if (!existing.photoUrl && entry.photoUrl) existing.photoUrl = entry.photoUrl;
         if (!existing.bio && entry.bio) existing.bio = entry.bio;
         for (const docId of entry.nominationDocIds) {
@@ -110,7 +111,9 @@ function renderHead() {
 
 function renderNames() {
   const union = unionCandidates();
+  const filter = Number(document.getElementById("division-filter")?.value ?? 0);
   const rows = [...union.values()]
+    .filter((entry) => filter === 0 || entry.memberships.includes(filter))
     .map((entry) => ({ ...entry, total: totalCount(board.votes, entry.id) }))
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
@@ -160,6 +163,7 @@ function renderNames() {
       const extra = document.createElement("div");
       extra.className = "extra";
       const bits = [];
+      bits.push(entry.memberships.map((d) => `D${d}`).join(" "));
       if (entry.category) bits.push(entry.category);
       if (entry.nominationDocIds.length) {
         bits.push(`${entry.nominationDocIds.length} nomination${entry.nominationDocIds.length === 1 ? "" : "s"}`);
@@ -175,7 +179,8 @@ function renderNames() {
         const td = document.createElement("td");
         td.className = "num";
         const n = divisionCount(board.votes, entry.id, d);
-        td.textContent = n ? String(n) : "·";
+        td.textContent = entry.memberships.includes(d) ? String(n) : "—";
+        if (!entry.memberships.includes(d)) td.style.opacity = "0.35";
         tr.append(td);
       }
 
@@ -427,6 +432,7 @@ document.getElementById("sign-in").addEventListener("click", async () => {
 });
 
 document.getElementById("sign-out").addEventListener("click", () => signOut(auth));
+document.getElementById("division-filter").addEventListener("change", renderNames);
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
