@@ -71,6 +71,8 @@ const submitBtn = document.getElementById("submit-btn");
 const overlay = document.getElementById("overlay");
 const foot = document.getElementById("foot");
 const photoStrip = document.getElementById("photo-strip");
+const pickBanner = document.getElementById("pick-banner");
+const pickCount = document.getElementById("pick-count");
 foot.textContent = `Live results · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
 
 let board = { byDivision: {}, votes: new Map() };
@@ -299,14 +301,17 @@ function render() {
 
   if (voted) {
     submitBar.classList.add("hidden");
+    pickBanner.classList.add("hidden");
     status.innerHTML = "";
     const b = document.createElement("b");
     b.textContent = "Thanks for voting!";
     status.append(b, ` ${total} vote${total === 1 ? "" : "s"} cast — live results below.`);
   } else {
     submitBar.classList.remove("hidden");
+    pickBanner.classList.remove("hidden");
     const n = picks.size;
-    status.textContent = `Pick your top ${MAX_PICKS} legends — ${n} of ${MAX_PICKS} selected.`;
+    pickCount.textContent = `${n} of ${MAX_PICKS} selected`;
+    status.textContent = "Tap names to select, then hit submit at the bottom.";
     submitBtn.disabled = n === 0;
     submitBtn.textContent =
       n === 0 ? `Pick up to ${MAX_PICKS}` : `Submit ${n} vote${n === 1 ? "" : "s"}`;
