@@ -12,11 +12,25 @@ import { db } from "./firebase.js";
 
 export const DIVISIONS = [1, 2, 3, 4, 5, 6, 7];
 
-// Candidate names are shared across divisions; each division has its own
-// tally per name, stored in `votes` as doc id `d{division}_{nameId}`.
+export const DIVISION_NAMES = {
+  1: "Northeast Division",
+  2: "Southeast Division",
+  3: "North Central Division",
+  4: "South Central Division",
+  5: "West Central Division",
+  6: "Northwest Division",
+  7: "Pacific Division",
+};
+
+// Candidates come from two sources, deduped by name slug:
+//  - `nominations` (the 75 Most Influential submission app): each doc has
+//    nomineeName + division ('1'..'7'), so those names are per-division
+//  - `names` (admin bulk adds): shared across every division
+// Each division tallies separately in `votes` as doc id `d{division}_{slug}`.
 export const NAMES_COLLECTION = "names";
 
 const NAMES = collection(db, NAMES_COLLECTION);
+const NOMINATIONS = collection(db, "nominations");
 const VOTES = collection(db, "votes");
 
 export function slugify(name) {
@@ -80,12 +94,16 @@ export async function addNames(labels) {
   return entries.length;
 }
 
-// Remove a candidate and its tallies in every division (admin).
-export async function removeName(id) {
+// Remove a candidate everywhere (admin): the admin-added name doc, its
+// tallies in every division, and any nomination docs for the same person.
+export async function removeName(id, nominationDocIds = []) {
   await deleteDoc(doc(NAMES, id));
   const batch = writeBatch(db);
   for (const division of DIVISIONS) {
     batch.delete(doc(VOTES, `d${division}_${id}`));
+  }
+  for (const docId of nominationDocIds) {
+    batch.delete(doc(NOMINATIONS, docId));
   }
   await batch.commit();
 }
@@ -103,25 +121,55 @@ export async function voteFor(id, division) {
   );
 }
 
-// Calls `callback` with { names, votes } on every change to either
-// collection:
-//   names: [{ id, name }] sorted alphabetically
+// Calls `callback` with { byDivision, votes } on every change:
+//   byDivision: { [division]: [{ id, name, nominationDocIds }] } sorted by name
 //   votes: Map of nameId -> { [division]: count }
 export function watchBoard(callback) {
-  let names = new Map();
+  let adminNames = new Map(); // slug -> name, shared across divisions
+  let nominated = new Map(); // division -> Map(slug -> name)
+  let nominationDocs = new Map(); // slug -> [nomination doc ids]
   let votes = new Map();
 
   const emit = () => {
-    const list = [...names.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    callback({ names: list, votes });
+    const byDivision = {};
+    for (const d of DIVISIONS) {
+      const merged = new Map(nominated.get(d) ?? []);
+      for (const [id, name] of adminNames) {
+        if (!merged.has(id)) merged.set(id, name);
+      }
+      byDivision[d] = [...merged.entries()]
+        .map(([id, name]) => ({
+          id,
+          name,
+          nominationDocIds: nominationDocs.get(id) ?? [],
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+    callback({ byDivision, votes });
   };
 
   const stopNames = onSnapshot(NAMES, (snapshot) => {
-    names = new Map();
+    adminNames = new Map();
     snapshot.forEach((docSnap) => {
-      names.set(docSnap.id, displayName(docSnap.id, docSnap.data()));
+      adminNames.set(docSnap.id, displayName(docSnap.id, docSnap.data()));
+    });
+    emit();
+  });
+
+  const stopNoms = onSnapshot(NOMINATIONS, (snapshot) => {
+    nominated = new Map();
+    nominationDocs = new Map();
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const division = Number(data.division);
+      const label = String(data.nomineeName ?? "").trim();
+      const id = slugify(label);
+      if (!DIVISIONS.includes(division) || !id) return;
+      if (!nominated.has(division)) nominated.set(division, new Map());
+      nominated.get(division).set(id, label);
+      const docs = nominationDocs.get(id) ?? [];
+      docs.push(docSnap.id);
+      nominationDocs.set(id, docs);
     });
     emit();
   });
@@ -143,6 +191,7 @@ export function watchBoard(callback) {
 
   return () => {
     stopNames();
+    stopNoms();
     stopVotes();
   };
 }

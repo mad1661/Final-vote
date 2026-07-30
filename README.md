@@ -53,6 +53,15 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /nominations/{nomId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+    match /divisionAssets/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     match /votes/{voteId} {
       allow read: if true;
       allow create: if request.resource.data.count == 1

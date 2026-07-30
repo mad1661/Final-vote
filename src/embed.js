@@ -71,7 +71,7 @@ const divTag = document.getElementById("div-tag");
 const foot = document.getElementById("foot");
 foot.textContent = `Live results · One vote per person · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
 
-let board = { names: [], votes: new Map() };
+let board = { byDivision: {}, votes: new Map() };
 let demoChoice = null;
 
 function demoBoard() {
@@ -84,6 +84,8 @@ function demoBoard() {
     "Warren Johnson",
     "Joe Amato",
   ].map((name, i) => ({ id: `demo-${i}`, name }));
+  const byDivision = {};
+  byDivision[division] = names;
   const votes = new Map([
     ["demo-0", { [division]: 214 }],
     ["demo-1", { [division]: 198 }],
@@ -93,13 +95,13 @@ function demoBoard() {
     ["demo-5", { [division]: 44 }],
     ["demo-6", { [division]: 23 }],
   ]);
-  return { names, votes };
+  return { byDivision, votes };
 }
 
 function render() {
   const voted = DEMO ? demoChoice !== null : hasVoted(division);
   const choice = DEMO ? demoChoice : votedFor(division);
-  const rows = board.names
+  const rows = (board.byDivision[division] ?? [])
     .map((entry) => ({
       ...entry,
       count: divisionCount(board.votes, entry.id, division),

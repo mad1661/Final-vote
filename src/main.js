@@ -21,7 +21,7 @@ const divTag = document.getElementById("div-tag");
 const searchEl = document.getElementById("search");
 const listEl = document.getElementById("list");
 
-let board = { names: [], votes: new Map() };
+let board = { byDivision: {}, votes: new Map() };
 let query = "";
 
 function renderPicker() {
@@ -46,7 +46,7 @@ function renderPicker() {
 function renderBoard() {
   const voted = hasVoted(division);
   const choice = votedFor(division);
-  const rows = board.names
+  const rows = (board.byDivision[division] ?? [])
     .map((entry) => ({
       ...entry,
       count: divisionCount(board.votes, entry.id, division),

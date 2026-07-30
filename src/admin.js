@@ -30,7 +30,7 @@ const namesBody = document.getElementById("names-body");
 const countLine = document.getElementById("count-line");
 const snippetsEl = document.getElementById("snippets");
 
-let board = { names: [], votes: new Map() };
+let board = { byDivision: {}, votes: new Map() };
 let stopWatching = null;
 
 function renderHead() {
@@ -47,7 +47,13 @@ function renderHead() {
 }
 
 function renderNames() {
-  const rows = board.names
+  const union = new Map();
+  for (const d of DIVISIONS) {
+    for (const entry of board.byDivision[d] ?? []) {
+      union.set(entry.id, entry);
+    }
+  }
+  const rows = [...union.values()]
     .map((entry) => ({
       ...entry,
       total: totalCount(board.votes, entry.id),
@@ -85,7 +91,7 @@ function renderNames() {
         if (!confirm(`Remove "${entry.name}" and its votes in all divisions?`))
           return;
         try {
-          await removeName(entry.id);
+          await removeName(entry.id, entry.nominationDocIds);
         } catch (err) {
           console.error("Remove failed:", err);
           alert("Could not remove that name — check your access and try again.");
@@ -236,6 +242,6 @@ onAuthStateChanged(auth, (user) => {
     adminUi.classList.add("hidden");
     stopWatching?.();
     stopWatching = null;
-    board = { names: [], votes: new Map() };
+    board = { byDivision: {}, votes: new Map() };
   }
 });
