@@ -180,6 +180,70 @@ function findDuplicateGroups(entries) {
   return [...groups.values()].filter((g) => g.length > 1);
 }
 
+const viewOverlay = document.getElementById("view-overlay");
+viewOverlay.addEventListener("click", (e) => {
+  if (e.target === viewOverlay) viewOverlay.classList.add("hidden");
+});
+
+function showCandidate(entry) {
+  const card = document.createElement("div");
+  card.className = "editor";
+  const photos = entry.photos?.length
+    ? entry.photos
+    : entry.photoUrl
+      ? [entry.photoUrl]
+      : [];
+  if (photos[0]) {
+    const img = document.createElement("img");
+    img.src = photos[0];
+    img.style.cssText =
+      "width:100%;max-height:16rem;object-fit:contain;background:rgba(0,0,0,.4);border-radius:12px;margin-bottom:.6rem";
+    card.append(img);
+    if (photos.length > 1) {
+      const grid = document.createElement("div");
+      grid.style.cssText =
+        "display:grid;grid-template-columns:repeat(auto-fill,minmax(4rem,1fr));gap:.4rem;margin-bottom:.6rem";
+      for (const url of photos.slice(1, 9)) {
+        const t = document.createElement("img");
+        t.src = url;
+        t.style.cssText =
+          "width:100%;height:4rem;object-fit:cover;border-radius:8px;cursor:pointer";
+        t.addEventListener("click", () => {
+          const prev = img.src;
+          img.src = url;
+          t.src = prev;
+        });
+        grid.append(t);
+      }
+      card.append(grid);
+    }
+  }
+  const h3 = document.createElement("h3");
+  h3.textContent = entry.name;
+  card.append(h3);
+  const meta = document.createElement("p");
+  meta.className = "hint";
+  meta.textContent = [
+    entry.category,
+    entry.memberships.map((d) => `D${d}`).join(" "),
+    `${entry.nominationDocIds.length} nomination${entry.nominationDocIds.length === 1 ? "" : "s"}`,
+    `${totalCount(board.votes, entry.id)} votes`,
+  ].filter(Boolean).join(" · ");
+  card.append(meta);
+  const bio = document.createElement("p");
+  bio.style.cssText =
+    "font-family:var(--font-serif);line-height:1.5;color:var(--text-2);white-space:pre-wrap";
+  bio.textContent = entry.bio || "No bio submitted.";
+  card.append(bio);
+  const close = document.createElement("button");
+  close.className = "btn small";
+  close.textContent = "Close";
+  close.addEventListener("click", () => viewOverlay.classList.add("hidden"));
+  card.append(close);
+  viewOverlay.replaceChildren(card);
+  viewOverlay.classList.remove("hidden");
+}
+
 function renderDupes() {
   const section = document.getElementById("dupes-section");
   const list = document.getElementById("dupes-list");
@@ -208,6 +272,11 @@ function renderDupes() {
       for (const entry of group) {
         const row = document.createElement("div");
         row.className = "dupe-row";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.dataset.id = entry.id;
+        cb.style.cssText = "width:1.05rem;height:1.05rem;accent-color:var(--accent);cursor:pointer;flex-shrink:0";
+        row.append(cb);
         const thumb = document.createElement("span");
         thumb.className = "thumb";
         thumb.style.cssText =
@@ -233,12 +302,26 @@ function renderDupes() {
           `${totalCount(board.votes, entry.id)} votes`,
         ].join(" · ");
         who.append(nm, extra);
+        const view = document.createElement("button");
+        view.className = "btn secondary small";
+        view.textContent = "View";
+        view.addEventListener("click", () => showCandidate(entry));
         const keep = document.createElement("button");
         keep.className = "btn small";
         keep.textContent = "Keep this one";
         keep.addEventListener("click", async () => {
-          const others = group.filter((e) => e.id !== entry.id);
-          if (!confirm(`Keep "${entry.name}" and merge ${others.map((o) => `"${o.name}"`).join(", ")} into it?`)) return;
+          const ticked = [...box.querySelectorAll("input[type=checkbox]:checked")]
+            .map((c) => c.dataset.id)
+            .filter((id) => id !== entry.id);
+          const others = ticked.length
+            ? group.filter((e) => ticked.includes(e.id))
+            : group.filter((e) => e.id !== entry.id);
+          if (others.length === 0) {
+            alert("Tick the box on at least one other entry to merge into this one.");
+            return;
+          }
+          const scopeNote = ticked.length ? "the TICKED entries" : "ALL entries in this group";
+          if (!confirm(`Keep "${entry.name}" and merge ${scopeNote}: ${others.map((o) => `"${o.name}"`).join(", ")} into it?`)) return;
           try {
             await mergeCandidates(entry, others, board.votes);
           } catch (err) {
@@ -256,7 +339,7 @@ function renderDupes() {
           );
           renderDupes();
         });
-        row.append(thumb, who, notDupe, keep);
+        row.append(thumb, who, view, notDupe, keep);
         box.append(row);
       }
       const actions = document.createElement("div");

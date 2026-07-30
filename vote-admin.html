@@ -463,10 +463,13 @@
         <section id="dupes-section" class="hidden">
           <h2>Possible duplicates — review &amp; merge</h2>
           <p class="hint">
-            These names look like they might be the same person. In each
-            group, click <b>Keep this one</b> on the correct name — the
-            others' votes and nominations move onto it. If they're actually
-            different people, click <b>Not duplicates</b>.
+            These names look like they might be the same person. Click
+            <b>View</b> to compare photos and bios. Tick the boxes on the
+            entries that ARE the same person, then click <b>Keep this one</b>
+            on the correct spelling — only the ticked entries merge into it
+            (nothing ticked = the whole group merges). <b>Not a duplicate</b>
+            removes one name from the group; <b>None are duplicates</b>
+            clears the group.
           </p>
           <div id="dupes-list"></div>
         </section>
@@ -539,6 +542,7 @@
       </div>
     </div>
 
+    <div class="overlay hidden" id="view-overlay"></div>
     <div class="overlay hidden" id="editor-overlay">
       <div class="editor">
         <h3 id="editor-title">Edit candidate</h3>
