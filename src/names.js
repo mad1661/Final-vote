@@ -1,10 +1,12 @@
 import {
   collection,
+  deleteDoc,
   doc,
   increment,
   onSnapshot,
   serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 
@@ -50,6 +52,38 @@ export async function addName(name) {
     { merge: true }
   );
   return id;
+}
+
+// Bulk-add names (admin). Chunked to stay under Firestore's 500-write
+// batch limit; slug keying means duplicates merge instead of multiplying.
+export async function addNames(labels) {
+  const entries = [];
+  const seen = new Set();
+  for (const raw of labels) {
+    const label = String(raw ?? "").trim();
+    const id = slugify(label);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    entries.push({ id, label });
+  }
+  for (let i = 0; i < entries.length; i += 450) {
+    const batch = writeBatch(db);
+    for (const { id, label } of entries.slice(i, i + 450)) {
+      batch.set(
+        doc(NAMES, id),
+        { name: label, createdAt: serverTimestamp() },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+  }
+  return entries.length;
+}
+
+// Remove a candidate and its tally (admin).
+export async function removeName(id) {
+  await deleteDoc(doc(NAMES, id));
+  await deleteDoc(doc(VOTES, id));
 }
 
 export async function voteFor(id) {

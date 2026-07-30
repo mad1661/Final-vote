@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Final Vote — Admin</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        padding: 3rem 1rem;
+      }
+      main {
+        width: 100%;
+        max-width: 40rem;
+      }
+      h1 {
+        margin-bottom: 0.25rem;
+      }
+      #status {
+        opacity: 0.75;
+        min-height: 1.2em;
+      }
+      section {
+        margin-top: 2rem;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+      .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: #4f8ef7;
+        color: white;
+        cursor: pointer;
+      }
+      .btn.secondary {
+        background: transparent;
+        color: inherit;
+        border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      }
+      .btn.danger {
+        background: transparent;
+        color: #d64545;
+        border: 1px solid #d64545;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.85rem;
+      }
+      #bulk-input {
+        width: 100%;
+        min-height: 8rem;
+        padding: 0.6rem;
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 0.5rem;
+        background: transparent;
+        box-sizing: border-box;
+      }
+      .row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.75rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.4rem 0.5rem;
+        border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+      }
+      th:last-child,
+      td:last-child {
+        text-align: right;
+      }
+      .hidden {
+        display: none;
+      }
+      #signed-in-as {
+        font-size: 0.9rem;
+        opacity: 0.75;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Final Vote — Admin</h1>
+      <p id="status">Loading…</p>
+
+      <section id="auth-section">
+        <button id="sign-in" class="btn">Sign in with Google</button>
+      </section>
+
+      <div id="admin-ui" class="hidden">
+        <div class="row">
+          <span id="signed-in-as"></span>
+          <button id="sign-out" class="btn secondary">Sign out</button>
+        </div>
+
+        <section>
+          <h2>Bulk add names</h2>
+          <p>Paste names below — one per line (commas also work).</p>
+          <textarea id="bulk-input" placeholder="Jane Smith&#10;John Doe&#10;…"></textarea>
+          <div class="row">
+            <button id="add-pasted" class="btn">Add pasted names</button>
+            <label class="btn secondary" for="file-input" style="cursor: pointer">
+              Upload Excel / CSV
+            </label>
+            <input
+              id="file-input"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              class="hidden"
+            />
+          </div>
+          <p id="bulk-status"></p>
+        </section>
+
+        <section>
+          <h2>Current names</h2>
+          <p id="count-line"></p>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Votes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="names-body"></tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/admin.js"></script>
+  </body>
+</html>
