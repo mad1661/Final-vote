@@ -132,16 +132,23 @@ function looksSimilar(a, b) {
   return false;
 }
 
-const DISMISSED_KEY = "dupes-dismissed";
-function dismissedSet() {
+// Dismissals are stored per PAIR, so pulling one name out of a group
+// leaves the rest of the group flagged.
+const DISMISSED_PAIRS_KEY = "dupes-dismissed-pairs";
+function dismissedPairs() {
   try {
-    return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? "[]"));
+    return new Set(JSON.parse(localStorage.getItem(DISMISSED_PAIRS_KEY) ?? "[]"));
   } catch {
     return new Set();
   }
 }
-function groupKey(group) {
-  return group.map((e) => e.id).sort().join("|");
+function pairKey(a, b) {
+  return [a, b].sort().join("|");
+}
+function dismissPairs(pairs) {
+  const set = dismissedPairs();
+  for (const [a, b] of pairs) set.add(pairKey(a, b));
+  localStorage.setItem(DISMISSED_PAIRS_KEY, JSON.stringify([...set]));
 }
 
 function findDuplicateGroups(entries) {
@@ -153,8 +160,10 @@ function findDuplicateGroups(entries) {
     }
     return x;
   };
+  const dismissed = dismissedPairs();
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
+      if (dismissed.has(pairKey(entries[i].id, entries[j].id))) continue;
       if (looksSimilar(entries[i], entries[j])) {
         parent.set(find(entries[i].id), find(entries[j].id));
       }
@@ -166,10 +175,7 @@ function findDuplicateGroups(entries) {
     if (!groups.has(root)) groups.set(root, []);
     groups.get(root).push(e);
   }
-  const dismissed = dismissedSet();
-  return [...groups.values()].filter(
-    (g) => g.length > 1 && !dismissed.has(groupKey(g))
-  );
+  return [...groups.values()].filter((g) => g.length > 1);
 }
 
 function renderDupes() {
@@ -223,18 +229,32 @@ function renderDupes() {
             alert("Merge failed — check your admin access and try again.");
           }
         });
-        row.append(thumb, who, keep);
+        const notDupe = document.createElement("button");
+        notDupe.className = "btn secondary small";
+        notDupe.textContent = "Not a duplicate";
+        notDupe.title = "Remove just this name from the group";
+        notDupe.addEventListener("click", () => {
+          dismissPairs(
+            group.filter((e) => e.id !== entry.id).map((e) => [entry.id, e.id])
+          );
+          renderDupes();
+        });
+        row.append(thumb, who, notDupe, keep);
         box.append(row);
       }
       const actions = document.createElement("div");
       actions.className = "dupe-actions";
       const dismiss = document.createElement("button");
       dismiss.className = "btn secondary small";
-      dismiss.textContent = "Not duplicates";
+      dismiss.textContent = "None are duplicates";
       dismiss.addEventListener("click", () => {
-        const dismissed = dismissedSet();
-        dismissed.add(groupKey(group));
-        localStorage.setItem(DISMISSED_KEY, JSON.stringify([...dismissed]));
+        const pairs = [];
+        for (let i = 0; i < group.length; i++) {
+          for (let j = i + 1; j < group.length; j++) {
+            pairs.push([group[i].id, group[j].id]);
+          }
+        }
+        dismissPairs(pairs);
         renderDupes();
       });
       actions.append(dismiss);
