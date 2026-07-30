@@ -112,11 +112,30 @@ function demoBoard() {
 function showBio(entry) {
   const card = document.createElement("div");
   card.className = "bio-card";
-  if (entry.photoUrl) {
+  const photos = entry.photos?.length ? entry.photos : entry.photoUrl ? [entry.photoUrl] : [];
+  if (photos[0]) {
     const img = document.createElement("img");
-    img.src = entry.photoUrl;
+    img.src = photos[0];
     img.alt = entry.name;
     card.append(img);
+  }
+  if (photos.length > 1) {
+    const grid = document.createElement("div");
+    grid.className = "photo-grid";
+    for (const url of photos.slice(1, 7)) {
+      const t = document.createElement("img");
+      t.src = url;
+      t.alt = entry.name;
+      t.loading = "lazy";
+      t.addEventListener("click", () => {
+        const main = card.querySelector("img");
+        const prev = main.src;
+        main.src = url;
+        t.src = prev;
+      });
+      grid.append(t);
+    }
+    card.append(grid);
   }
   const h3 = document.createElement("h3");
   h3.textContent = entry.name;

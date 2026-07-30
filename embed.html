@@ -349,6 +349,20 @@
         border-radius: var(--r-md);
         margin-bottom: 0.8rem;
       }
+      .bio-card .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(4.2rem, 1fr));
+        gap: 0.4rem;
+        margin: -0.3rem 0 0.8rem;
+      }
+      .bio-card .photo-grid img {
+        width: 100%;
+        height: 4.2rem;
+        object-fit: cover;
+        border-radius: var(--r-sm);
+        margin: 0;
+        cursor: pointer;
+      }
       .bio-card h3 {
         margin: 0 0 0.15rem;
         font-size: 1.25rem;

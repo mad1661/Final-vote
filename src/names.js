@@ -214,10 +214,16 @@ export function watchBoard(callback) {
       byDivision[d] = [...merged.entries()]
         .map(([id, info]) => {
           const override = adminNames.get(id) ?? {};
+          const photos = [];
+          if (override.photoUrl) photos.push(override.photoUrl);
+          for (const url of info.photos ?? []) {
+            if (!photos.includes(url)) photos.push(url);
+          }
           return {
             id,
             name: override.name ?? info.name,
-            photoUrl: override.photoUrl || info.photoUrl || "",
+            photoUrl: photos[0] ?? "",
+            photos,
             bio: override.bio || info.bio || "",
             category: info.category || "",
             nominationDocIds: nominationDocs.get(id) ?? [],
@@ -252,8 +258,11 @@ export function watchBoard(callback) {
       const id = slugify(label);
       if (!DIVISIONS.includes(division) || !id) return;
       if (!nominated.has(division)) nominated.set(division, new Map());
-      const existing = nominated.get(division).get(id) ?? { name: label };
+      const existing = nominated.get(division).get(id) ?? { name: label, photos: [] };
       existing.name = label;
+      if (data.photoUrl && !existing.photos.includes(data.photoUrl)) {
+        existing.photos.push(data.photoUrl);
+      }
       if (!existing.photoUrl && data.photoUrl) existing.photoUrl = data.photoUrl;
       if (!existing.bio && data.reason) existing.bio = String(data.reason);
       if (!existing.category && data.category) existing.category = String(data.category);
