@@ -3,108 +3,352 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Final Vote</title>
+    <title>Legend Vote — The Final Vote</title>
     <style>
       :root {
-        color-scheme: light dark;
-        font-family: system-ui, sans-serif;
+        color-scheme: dark;
+        --bg: #0b0d12;
+        --bg-card: #151924;
+        --bg-card-hover: #1b2130;
+        --border: #262d3d;
+        --text: #eef1f7;
+        --text-dim: #96a0b5;
+        --accent: #e8342a;
+        --accent-2: #ff7a3d;
+        --gold: #f5c542;
+        --silver: #c0c8d8;
+        --bronze: #d08a4e;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      * {
+        box-sizing: border-box;
       }
       body {
         margin: 0;
+        background:
+          radial-gradient(1100px 500px at 50% -10%, #1c2233 0%, transparent 60%),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 46rem;
+        margin: 0 auto;
+        padding: 0 1rem 4rem;
+      }
+      /* Hero */
+      header {
+        text-align: center;
+        padding: 3.5rem 0 2rem;
+      }
+      .kicker {
+        display: inline-block;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent-2);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.35rem 1rem;
+        margin-bottom: 1rem;
+        background: rgba(232, 52, 42, 0.08);
+      }
+      h1 {
+        font-size: clamp(2.4rem, 7vw, 3.6rem);
+        line-height: 1.05;
+        margin: 0 0 0.6rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+        background: linear-gradient(180deg, #fff 30%, #b9c2d6 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .subtitle {
+        color: var(--text-dim);
+        font-size: 1.05rem;
+        margin: 0;
+      }
+      /* Stats */
+      .stats {
         display: flex;
         justify-content: center;
-        padding: 3rem 1rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin: 1.5rem 0 0;
       }
-      main {
-        width: 100%;
-        max-width: 28rem;
+      .stat {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 0.6rem 1.1rem;
+        text-align: center;
+        min-width: 7rem;
       }
+      .stat b {
+        display: block;
+        font-size: 1.35rem;
+      }
+      .stat span {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-dim);
+      }
+      /* Status + search */
       #status {
-        opacity: 0.75;
+        text-align: center;
+        color: var(--text-dim);
+        margin: 1.25rem 0;
+        min-height: 1.3em;
       }
+      .search-row {
+        margin: 0 0 1rem;
+      }
+      #search {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text);
+        font-size: 1rem;
+      }
+      #search::placeholder {
+        color: var(--text-dim);
+      }
+      /* Cards */
       #names {
         list-style: none;
-        margin: 1.5rem 0 0;
+        margin: 0;
         padding: 0;
         display: grid;
-        gap: 0.75rem;
+        gap: 0.7rem;
       }
-      .option {
+      .card {
+        position: relative;
         display: grid;
-        gap: 0.25rem;
+        grid-template-columns: auto auto 1fr auto;
+        align-items: center;
+        gap: 0.9rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 0.85rem 1rem;
+        transition: transform 0.15s ease, border-color 0.15s ease,
+          background 0.15s ease;
+        overflow: hidden;
       }
-      .option button {
-        font: inherit;
-        text-align: left;
-        padding: 0.6rem 0.9rem;
-        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-        border-radius: 0.5rem;
-        background: transparent;
-        cursor: pointer;
+      .card:hover {
+        background: var(--bg-card-hover);
+        transform: translateY(-1px);
       }
-      .option button:not(:disabled):hover {
-        background: color-mix(in srgb, currentColor 8%, transparent);
+      .card.chosen {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(232, 52, 42, 0.15);
       }
-      .option button:disabled {
-        cursor: default;
+      .rank {
+        font-weight: 800;
+        font-size: 0.95rem;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #232a3b;
+        color: var(--text-dim);
+        flex-shrink: 0;
       }
-      .option.chosen button {
-        border-color: #4f8ef7;
+      .rank.r1 { background: var(--gold); color: #201a00; }
+      .rank.r2 { background: var(--silver); color: #1b1f28; }
+      .rank.r3 { background: var(--bronze); color: #241300; }
+      .avatar {
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 0.75rem;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        background: linear-gradient(135deg, #2a3145, #1d2331);
+        border: 1px solid var(--border);
+        color: var(--text);
+        letter-spacing: 0.02em;
       }
-      .option.leading button {
-        font-weight: 600;
+      .info {
+        min-width: 0;
       }
-      .bar {
-        height: 0.35rem;
-        border-radius: 0.2rem;
-        background: #4f8ef7;
-        transition: width 0.3s ease;
+      .info .name {
+        font-weight: 700;
+        font-size: 1.05rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .meter {
+        margin-top: 0.45rem;
+        height: 0.4rem;
+        border-radius: 999px;
+        background: #232a3b;
+        overflow: hidden;
+      }
+      .meter .bar {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
       }
       .tally {
-        font-size: 0.85rem;
-        opacity: 0.75;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        margin-top: 0.3rem;
+      }
+      .vote-btn {
+        font: inherit;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        padding: 0.6rem 1.1rem;
+        border: none;
+        border-radius: 0.6rem;
+        background: linear-gradient(135deg, var(--accent), #c31f16);
+        color: #fff;
+        cursor: pointer;
+        transition: filter 0.15s ease, transform 0.1s ease;
+      }
+      .vote-btn:hover:not(:disabled) {
+        filter: brightness(1.15);
+        transform: translateY(-1px);
+      }
+      .vote-btn:disabled {
+        background: #232a3b;
+        color: var(--text-dim);
+        cursor: default;
+      }
+      .card.chosen .vote-btn {
+        background: var(--accent);
+        color: #fff;
+      }
+      .your-pick {
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        background: var(--accent);
+        color: #fff;
+        padding: 0.25rem 0.6rem;
+        border-bottom-left-radius: 0.6rem;
+      }
+      .empty {
+        text-align: center;
+        color: var(--text-dim);
+        padding: 2rem 0;
+      }
+      /* Suggest */
+      .suggest {
+        margin-top: 2.5rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1.5rem;
+      }
+      .suggest h2 {
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-dim);
+        margin: 0 0 0.75rem;
       }
       #add-name-form {
-        margin-top: 2rem;
         display: flex;
         gap: 0.5rem;
       }
       #name-input {
-        font: inherit;
         flex: 1;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-        border-radius: 0.5rem;
-        background: transparent;
+        font: inherit;
+        padding: 0.65rem 1rem;
+        border-radius: 0.6rem;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text);
       }
       #add-name-form button {
         font: inherit;
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 0.5rem;
-        background: #4f8ef7;
-        color: white;
+        font-weight: 700;
+        padding: 0.65rem 1.2rem;
+        border: 1px solid var(--border);
+        border-radius: 0.6rem;
+        background: var(--bg-card);
+        color: var(--text);
         cursor: pointer;
+      }
+      #add-name-form button:hover {
+        background: var(--bg-card-hover);
+      }
+      footer {
+        text-align: center;
+        color: var(--text-dim);
+        font-size: 0.8rem;
+        margin-top: 3rem;
+      }
+      @media (max-width: 520px) {
+        .card {
+          grid-template-columns: auto 1fr auto;
+        }
+        .avatar {
+          display: none;
+        }
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Final Vote</h1>
-      <p id="status">Connecting to Firebase…</p>
-      <ul id="names"></ul>
-      <form id="add-name-form">
+    <div class="wrap">
+      <header>
+        <span class="kicker">The Final Vote</span>
+        <h1>Legend Vote</h1>
+        <p class="subtitle">
+          One vote. Every legend on the board. Make yours count.
+        </p>
+        <div class="stats">
+          <div class="stat"><b id="stat-names">–</b><span>Legends</span></div>
+          <div class="stat"><b id="stat-votes">–</b><span>Votes cast</span></div>
+          <div class="stat"><b id="stat-leader">–</b><span>Leading</span></div>
+        </div>
+      </header>
+
+      <p id="status">Connecting…</p>
+
+      <div class="search-row">
         <input
-          id="name-input"
-          type="text"
-          placeholder="Add a name…"
-          maxlength="80"
+          id="search"
+          type="search"
+          placeholder="Search names…"
           autocomplete="off"
-          required
         />
-        <button type="submit">Add name</button>
-      </form>
-    </main>
+      </div>
+
+      <ul id="names"></ul>
+
+      <section class="suggest">
+        <h2>Missing someone? Suggest a name</h2>
+        <form id="add-name-form">
+          <input
+            id="name-input"
+            type="text"
+            placeholder="Add a name…"
+            maxlength="80"
+            autocomplete="off"
+            required
+          />
+          <button type="submit">Add</button>
+        </form>
+      </section>
+
+      <footer>Live results — updates in real time.</footer>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
