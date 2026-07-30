@@ -9,21 +9,40 @@ import {
   watchBoard,
 } from "./names.js";
 
-// Division resolution, in priority order:
-// 1. explicit ?div=N on the embed URL (manual override)
-// 2. the embedding site's domain via document.referrer — division sites
-//    follow the pattern nhradiv1.com … nhradiv7.com, so any "div<1-7>"
-//    (or "division<1-7>") in the parent hostname decides it
+// Division resolution. The embedding site's domain is the source of truth
+// (nhradiv1.com -> Division 1), so it outranks a ?div=N pinned in the
+// snippet — a mispasted snippet self-corrects on a division domain.
+// Priority:
+// 1. any ancestor frame's origin (covers site builders like Wix that nest
+//    embeds in intermediate frames; Chromium/Safari)
+// 2. document.referrer hostname (Firefox fallback)
+// 3. explicit ?div=N (for sites whose domain names no division)
+function divisionFromHost(host) {
+  const match = /div(?:ision)?[-_]?([1-7])(?![0-9])/i.exec(host ?? "");
+  return match ? Number(match[1]) : null;
+}
+
 function detectDivision() {
-  const fromParam = Number(new URLSearchParams(location.search).get("div"));
-  if (DIVISIONS.includes(fromParam)) return fromParam;
+  const origins = location.ancestorOrigins;
+  if (origins) {
+    // Walk outward; the top-most ancestor is the real site domain.
+    for (let i = origins.length - 1; i >= 0; i--) {
+      try {
+        const found = divisionFromHost(new URL(origins[i]).hostname);
+        if (found) return found;
+      } catch {
+        // opaque/invalid origin — keep looking
+      }
+    }
+  }
   try {
-    const host = new URL(document.referrer).hostname;
-    const match = /div(?:ision)?[-_]?([1-7])/i.exec(host);
-    if (match) return Number(match[1]);
+    const found = divisionFromHost(new URL(document.referrer).hostname);
+    if (found) return found;
   } catch {
     // no or unparsable referrer — fall through
   }
+  const fromParam = Number(new URLSearchParams(location.search).get("div"));
+  if (DIVISIONS.includes(fromParam)) return fromParam;
   return null;
 }
 
