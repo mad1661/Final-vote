@@ -207,7 +207,12 @@ export function watchBoard(callback) {
     for (const d of DIVISIONS) {
       const merged = new Map(nominated.get(d) ?? []);
       for (const [id, info] of adminNames) {
-        const scope = info.division ?? 0;
+        // Ballot placement comes from nominations (each carries its
+        // division). Admin docs only add a candidate when explicitly
+        // scoped: a chosen division, or 0 for all. Legacy docs with no
+        // scope act as overrides (bio/photo/name) without adding anyone.
+        const scope = info.division;
+        if (scope === undefined) continue;
         if (scope !== 0 && scope !== d) continue;
         if (!merged.has(id)) merged.set(id, { name: info.name });
       }
@@ -242,7 +247,7 @@ export function watchBoard(callback) {
         name: displayName(docSnap.id, data),
         bio: typeof data.bio === "string" ? data.bio : "",
         photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
-        division: typeof data.division === "number" ? data.division : 0,
+        division: typeof data.division === "number" ? data.division : undefined,
       });
     });
     emit();
