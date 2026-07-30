@@ -1,0 +1,253 @@
+============================================================
+  NHRA 75 MOST INFLUENTIAL — WIX SETUP GUIDE
+============================================================
+
+This document explains how to embed the "75 Most Influential"
+nomination page on your Wix website. The page uses Firebase
+to store nominations and photos.
+
+
+============================================================
+BEFORE YOU START — Firebase Storage Setup
+============================================================
+
+Your Firebase project: voting-10a21
+
+1. Go to the Firebase Console:
+   https://console.firebase.google.com/project/voting-10a21
+
+2. Enable Firestore Database:
+   - Click "Firestore Database" in the left sidebar
+   - Click "Create database"
+   - Choose "Start in test mode" (you can tighten rules later)
+   - Select a region close to your users
+
+3. Enable Firebase Storage:
+   - Click "Storage" in the left sidebar
+   - Click "Get started"
+   - Choose "Start in test mode"
+
+4. Set Storage CORS rules (required for Wix embed):
+   - Install Firebase CLI: npm install -g firebase-tools
+   - Create a file called cors.json with this content:
+
+     [{"origin": ["*"], "method": ["GET"], "maxAgeSeconds": 3600}]
+
+   - Run: firebase login
+   - Run: gsutil cors set cors.json gs://voting-10a21.firebasestorage.app
+
+
+============================================================
+STEP 1: UPLOAD IMAGES TO FIREBASE STORAGE
+============================================================
+
+The Wix embed loads images from Firebase Storage (since Wix
+iframes can't access local files). You only do this once.
+
+1. Open "upload-assets.html" in your browser.
+   - Double-click it from the "75 on 75th Wix" folder
+   - Or right-click > Open With > Chrome/Safari
+
+2. Click "UPLOAD ALL ASSETS"
+
+3. Wait for all items to show "done" (green)
+
+4. Your images are now hosted at Firebase Storage and the
+   Wix embed will load them automatically.
+
+
+============================================================
+STEP 2: EMBED ON YOUR WIX PAGE
+============================================================
+
+1. Open "index.html" in a text editor.
+   - Right-click > Open With > TextEdit or Notepad
+   - Select ALL text (Cmd+A or Ctrl+A) and COPY (Cmd+C)
+
+2. In the Wix Editor, go to the page where you want
+   the nomination page to appear.
+
+3. Click the + button > "Embed Code" > "Embed HTML"
+
+4. An HTML box will appear. Click it > "Enter Code"
+
+5. PASTE the entire HTML code you copied.
+
+6. Click "Update" or "Apply."
+
+7. Resize the embed box:
+   - Width: 100% (stretch to full width)
+   - Height: at least 3000px
+   - TIP: Adjust height until content fits without
+     an internal scrollbar
+
+8. Save and publish your Wix site.
+
+
+============================================================
+SETTING THE DIVISION FOR EACH WIX SITE
+============================================================
+
+The page auto-detects which division to show based on the
+domain name:
+
+  nhradiv1.com  →  Division 1 (Northeast)
+  nhradiv2.com  →  Division 2 (Southeast)
+  nhradiv3.com  →  Division 3 (North Central)
+  nhradiv4.com  →  Division 4 (South Central)
+  nhradiv5.com  →  Division 5 (West Central)
+  nhradiv6.com  →  Division 6 (Northwest)
+  nhradiv7.com  →  Division 7 (Pacific)
+
+If the Wix site isn't on one of these domains, you can
+force a division by adding ?div=N to the embed URL.
+
+For example, in the Wix HTML embed, change the page URL to:
+  https://yoursite.wixsite.com/mysite/nominate?div=3
+
+This will show Division 3 branding.
+
+You can also edit the index.html and change the default
+fallback line from:
+
+  var currentDivision = detectDivision() || '7';
+
+to whichever division number you want, e.g.:
+
+  var currentDivision = detectDivision() || '3';
+
+
+============================================================
+HOW IT WORKS
+============================================================
+
+When a visitor lands on your page:
+
+  1. They see the animated intro (flames, logo pop-in)
+  2. The scrapbook hero shows their division's badge
+  3. They click "NOMINATIONS" to scroll to the form
+  4. They fill out the nomination form
+  5. They can optionally upload a photo of the nominee
+  6. Form data saves to Firebase Firestore
+  7. Uploaded photos save to Firebase Storage
+
+All nominations across all divisions go to the same
+Firebase project, tagged with their division number.
+
+
+============================================================
+VIEWING NOMINATIONS
+============================================================
+
+All nominations are stored in Firebase Firestore:
+
+  1. Go to Firebase Console > Firestore Database
+  2. Click the "nominations" collection
+  3. Each document is one nomination with:
+     - nomineeName, category, yearsActive, reason
+     - nominatorName, nominatorEmail
+     - division, divisionName
+     - photoUrl (if a photo was uploaded)
+     - submittedAt (timestamp)
+
+To export data:
+  - Use the Firebase Console export feature
+  - Or use a tool like Firefoo or Firetable for
+    spreadsheet-style viewing
+
+
+============================================================
+ADDING HERO PHOTOS
+============================================================
+
+The scrapbook section has 4 photo slots. To add your
+vintage drag racing photos:
+
+1. Upload your photos to Firebase Storage under the
+   "site-assets" folder (you can use the Firebase Console)
+
+2. Get the download URL for each photo
+
+3. In index.html, find the HERO_PHOTOS section and add
+   the URLs:
+
+   var HERO_PHOTOS = {
+     photo1: 'https://firebasestorage.googleapis.com/...',
+     photo2: 'https://firebasestorage.googleapis.com/...',
+     photo3: 'https://firebasestorage.googleapis.com/...',
+     photo4: 'https://firebasestorage.googleapis.com/...'
+   };
+
+
+============================================================
+TROUBLESHOOTING
+============================================================
+
+PROBLEM: Images don't show in the Wix embed
+FIX: Make sure you ran upload-assets.html first.
+     Check Firebase Console > Storage > site-assets
+     to verify the files are there.
+
+PROBLEM: The embed looks too small / has scrollbars
+FIX: Increase the embed box height in the Wix editor.
+     Try 3000px or 3500px.
+
+PROBLEM: Form submission fails
+FIX: Check that Firestore and Storage are enabled in
+     your Firebase Console. Check the browser console
+     (F12 > Console) for error messages.
+
+PROBLEM: Photo upload fails
+FIX: Make sure Firebase Storage is enabled and the
+     security rules allow writes. In test mode, rules
+     allow all reads/writes for 30 days.
+
+PROBLEM: Wrong division showing
+FIX: Add ?div=N to the page URL, or change the fallback
+     division in the JavaScript (see "Setting the Division"
+     section above).
+
+
+============================================================
+FIREBASE SECURITY RULES (for production)
+============================================================
+
+Once you're ready for production, update your Firestore
+rules to only allow creating new nominations (not reading
+or deleting them):
+
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /nominations/{doc} {
+        allow create: if true;
+        allow read, update, delete: if false;
+      }
+    }
+  }
+
+And your Storage rules to allow uploads to the nominations
+folder but not deletions:
+
+  rules_version = '2';
+  service firebase.storage {
+    match /b/{bucket}/o {
+      match /site-assets/{file} {
+        allow read: if true;
+      }
+      match /nominations/{allPaths=**} {
+        allow write: if request.resource.size < 10 * 1024 * 1024
+                     && request.resource.contentType.matches('image/.*');
+        allow read: if true;
+      }
+    }
+  }
+
+
+============================================================
+QUESTIONS?
+============================================================
+
+Contact: [Your name / email here]
+
+============================================================
