@@ -6,6 +6,7 @@ import {
   alreadyVoted,
   castVotes,
   divisionCount,
+  fetchBoardOnce,
   hasVoted,
   isValidEmail,
   loadDivisionAssets,
@@ -63,7 +64,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v12";
+const VERSION = "v13";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -675,8 +676,10 @@ if (!DIVISIONS.includes(division)) {
     render();
   } else if (app) {
     render();
+    let gotData = false;
     watchBoard(
       (next) => {
+        gotData = true;
         board = next;
         render();
       },
@@ -684,6 +687,23 @@ if (!DIVISIONS.includes(division)) {
         status.textContent = `Data error loading ${where} — ${err?.code ?? "unknown"}. Check the Firestore rules.`;
       }
     );
+    // The live listener holds a streaming connection open, and some mobile
+    // browsers quietly refuse that inside a cross-site iframe: no data, no
+    // error, just "Loading…" forever. If nothing has arrived shortly, read
+    // the ballot once over ordinary requests instead. The listener still
+    // wins if it wakes up later.
+    setTimeout(async () => {
+      if (gotData) return;
+      try {
+        const once = await fetchBoardOnce();
+        if (gotData) return;
+        board = once;
+        render();
+      } catch (err) {
+        console.error("One-shot board fetch failed:", err);
+        status.textContent = `Could not load the ballot — ${err?.code ?? "network error"}. Please refresh.`;
+      }
+    }, 5000);
   } else {
     status.textContent = "Failed to initialize.";
   }

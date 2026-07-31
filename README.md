@@ -58,7 +58,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isAdmin() {
       return request.auth != null
-             && request.auth.token.email == 'YOUR-EMAIL@gmail.com';
+             && request.auth.token.email in ['mad1661@gmail.com', 'mdawson@nhra.com'];
     }
     match /names/{nameId} {
       allow read: if true;
@@ -70,6 +70,10 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
     match /divisionAssets/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /config/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }

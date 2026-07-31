@@ -7,10 +7,21 @@
     <link rel="icon" type="image/png" href="/nhra-75-logo-small.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Loaded without blocking rendering: on a slow phone connection (or a
+         network that blocks Google Fonts) a blocking stylesheet holds up the
+         module scripts, and the ballot sits empty until it resolves. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400;1,700&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400;1,700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <style>
       :root {
         color-scheme: dark;

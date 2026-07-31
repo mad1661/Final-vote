@@ -460,6 +460,118 @@ export async function loadVoteLogos() {
   return out;
 }
 
+/* ---------- Board assembly (shared by the live listener and one-shot reads) */
+
+function parseNames(snapshot) {
+  const adminNames = new Map(); // slug -> override info, shared across divisions
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    adminNames.set(docSnap.id, {
+      name: displayName(docSnap.id, data),
+      bio: typeof data.bio === "string" ? data.bio : "",
+      photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
+      division: typeof data.division === "number" ? data.division : undefined,
+    });
+  });
+  return adminNames;
+}
+
+function parseNominations(snapshot) {
+  const nominated = new Map(); // division -> Map(slug -> info)
+  const nominationDocs = new Map(); // slug -> [nomination doc ids]
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    const division = Number(data.division);
+    const label = String(data.nomineeName ?? "").trim();
+    const id = slugify(label);
+    if (!DIVISIONS.includes(division) || !id) return;
+    if (!nominated.has(division)) nominated.set(division, new Map());
+    const existing = nominated.get(division).get(id) ?? { name: label, photos: [] };
+    existing.name = label;
+    if (data.photoUrl && !existing.photos.includes(data.photoUrl)) {
+      existing.photos.push(data.photoUrl);
+    }
+    if (!existing.photoUrl && data.photoUrl) existing.photoUrl = data.photoUrl;
+    if (!existing.bio && data.reason) existing.bio = String(data.reason);
+    if (!existing.category && data.category) existing.category = String(data.category);
+    nominated.get(division).set(id, existing);
+    const docs = nominationDocs.get(id) ?? [];
+    docs.push(docSnap.id);
+    nominationDocs.set(id, docs);
+  });
+  return { nominated, nominationDocs };
+}
+
+function parseVotes(snapshot) {
+  const votes = new Map();
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    const match = /^d(\d+)_(.+)$/.exec(docSnap.id);
+    const division = data.division ?? (match ? Number(match[1]) : null);
+    const nameId = data.nameId ?? (match ? match[2] : null);
+    if (!division || !nameId) return;
+    const perName = votes.get(nameId) ?? {};
+    perName[division] = data.count ?? 0;
+    votes.set(nameId, perName);
+  });
+  return votes;
+}
+
+function buildBoard({ adminNames, nominated, nominationDocs, votes }) {
+  const byDivision = {};
+  for (const d of DIVISIONS) {
+    const merged = new Map(nominated.get(d) ?? []);
+    for (const [id, info] of adminNames) {
+      // Ballot placement comes from nominations (each carries its
+      // division). Admin docs only add a candidate when explicitly
+      // scoped: a chosen division, or 0 for all. Legacy docs with no
+      // scope act as overrides (bio/photo/name) without adding anyone.
+      const scope = info.division;
+      if (scope === undefined) continue;
+      if (scope !== 0 && scope !== d) continue;
+      if (!merged.has(id)) merged.set(id, { name: info.name });
+    }
+    byDivision[d] = [...merged.entries()]
+      .map(([id, info]) => {
+        const override = adminNames.get(id) ?? {};
+        const photos = [];
+        if (override.photoUrl) photos.push(override.photoUrl);
+        for (const url of info.photos ?? []) {
+          if (!photos.includes(url)) photos.push(url);
+        }
+        return {
+          id,
+          name: override.name ?? info.name,
+          photoUrl: photos[0] ?? "",
+          photos,
+          bio: override.bio || info.bio || "",
+          category: info.category || "",
+          nominationDocIds: nominationDocs.get(id) ?? [],
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return { byDivision, votes };
+}
+
+// One-shot read of the whole board. Live listeners hold a streaming
+// connection open, which some mobile browsers refuse inside a cross-site
+// iframe — the listener then never fires and never errors, leaving the
+// ballot on "Loading…". A plain fetch uses ordinary requests and gets
+// through, so the widget falls back to this.
+export async function fetchBoardOnce() {
+  const [namesSnap, nomsSnap, votesSnap] = await Promise.all([
+    getDocs(NAMES),
+    getDocs(NOMINATIONS),
+    getDocs(VOTES),
+  ]);
+  return buildBoard({
+    adminNames: parseNames(namesSnap),
+    ...parseNominations(nomsSnap),
+    votes: parseVotes(votesSnap),
+  });
+}
+
 // Calls `callback` with { byDivision, votes } on every change:
 //   byDivision: { [division]: [{ id, name, nominationDocIds }] } sorted by name
 //   votes: Map of nameId -> { [division]: count }
@@ -468,100 +580,27 @@ export function watchBoard(callback, onError) {
     console.error(`watchBoard ${where}:`, err);
     onError?.(where, err);
   };
-  let adminNames = new Map(); // slug -> name, shared across divisions
-  let nominated = new Map(); // division -> Map(slug -> name)
-  let nominationDocs = new Map(); // slug -> [nomination doc ids]
+  let adminNames = new Map();
+  let nominated = new Map();
+  let nominationDocs = new Map();
   let votes = new Map();
 
   const emit = () => {
-    const byDivision = {};
-    for (const d of DIVISIONS) {
-      const merged = new Map(nominated.get(d) ?? []);
-      for (const [id, info] of adminNames) {
-        // Ballot placement comes from nominations (each carries its
-        // division). Admin docs only add a candidate when explicitly
-        // scoped: a chosen division, or 0 for all. Legacy docs with no
-        // scope act as overrides (bio/photo/name) without adding anyone.
-        const scope = info.division;
-        if (scope === undefined) continue;
-        if (scope !== 0 && scope !== d) continue;
-        if (!merged.has(id)) merged.set(id, { name: info.name });
-      }
-      byDivision[d] = [...merged.entries()]
-        .map(([id, info]) => {
-          const override = adminNames.get(id) ?? {};
-          const photos = [];
-          if (override.photoUrl) photos.push(override.photoUrl);
-          for (const url of info.photos ?? []) {
-            if (!photos.includes(url)) photos.push(url);
-          }
-          return {
-            id,
-            name: override.name ?? info.name,
-            photoUrl: photos[0] ?? "",
-            photos,
-            bio: override.bio || info.bio || "",
-            category: info.category || "",
-            nominationDocIds: nominationDocs.get(id) ?? [],
-          };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name));
-    }
-    callback({ byDivision, votes });
+    callback(buildBoard({ adminNames, nominated, nominationDocs, votes }));
   };
 
   const stopNames = onSnapshot(NAMES, (snapshot) => {
-    adminNames = new Map();
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      adminNames.set(docSnap.id, {
-        name: displayName(docSnap.id, data),
-        bio: typeof data.bio === "string" ? data.bio : "",
-        photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
-        division: typeof data.division === "number" ? data.division : undefined,
-      });
-    });
+    adminNames = parseNames(snapshot);
     emit();
   }, reportError("names"));
 
   const stopNoms = onSnapshot(NOMINATIONS, (snapshot) => {
-    nominated = new Map();
-    nominationDocs = new Map();
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const division = Number(data.division);
-      const label = String(data.nomineeName ?? "").trim();
-      const id = slugify(label);
-      if (!DIVISIONS.includes(division) || !id) return;
-      if (!nominated.has(division)) nominated.set(division, new Map());
-      const existing = nominated.get(division).get(id) ?? { name: label, photos: [] };
-      existing.name = label;
-      if (data.photoUrl && !existing.photos.includes(data.photoUrl)) {
-        existing.photos.push(data.photoUrl);
-      }
-      if (!existing.photoUrl && data.photoUrl) existing.photoUrl = data.photoUrl;
-      if (!existing.bio && data.reason) existing.bio = String(data.reason);
-      if (!existing.category && data.category) existing.category = String(data.category);
-      nominated.get(division).set(id, existing);
-      const docs = nominationDocs.get(id) ?? [];
-      docs.push(docSnap.id);
-      nominationDocs.set(id, docs);
-    });
+    ({ nominated, nominationDocs } = parseNominations(snapshot));
     emit();
   }, reportError("nominations"));
 
   const stopVotes = onSnapshot(VOTES, (snapshot) => {
-    votes = new Map();
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const match = /^d(\d+)_(.+)$/.exec(docSnap.id);
-      const division = data.division ?? (match ? Number(match[1]) : null);
-      const nameId = data.nameId ?? (match ? match[2] : null);
-      if (!division || !nameId) return;
-      const perName = votes.get(nameId) ?? {};
-      perName[division] = data.count ?? 0;
-      votes.set(nameId, perName);
-    });
+    votes = parseVotes(snapshot);
     emit();
   }, reportError("votes"));
 
