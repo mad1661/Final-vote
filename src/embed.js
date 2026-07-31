@@ -63,17 +63,33 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v11";
+const VERSION = "v12";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
 // Inside an iframe, report our content height so the host page (using
 // the snippet's resize script) can grow the iframe and scroll as one
 // page instead of nesting a second scrollbar.
+const widgetEl = document.querySelector(".widget");
+
+// Real content height, whichever scrolling mode we're in.
+function contentHeight() {
+  return Math.max(widgetEl.scrollHeight, document.body.scrollHeight);
+}
+
+// Scroll back to the top of whatever is actually scrolling.
+function scrollToTop() {
+  if (document.documentElement.classList.contains("frame-scroll")) {
+    widgetEl.scrollTop = 0;
+  } else {
+    window.scrollTo({ top: 0 });
+  }
+}
+
 try {
   if (window.self !== window.top) {
     const report = () => {
-      const height = document.documentElement.scrollHeight;
+      const height = contentHeight();
       // Walk every ancestor, not just the immediate parent: site builders
       // often wrap an embed in their own frame, and the page holding the
       // resize script is then two levels up.
@@ -82,6 +98,15 @@ try {
         frame = frame.parent;
         frame.postMessage({ legendVoteHeight: height }, "*");
       }
+      // If the host never grows the frame — an embed pinned to a fixed
+      // height, or one whose page dropped the resize script — everything
+      // past that height is unreachable, and with scrolling="no" it can't
+      // even be scrolled to. Give the widget its own scrollbar so the whole
+      // ballot stays usable. Undone automatically if the frame does grow.
+      document.documentElement.classList.toggle(
+        "frame-scroll",
+        widgetEl.scrollHeight > window.innerHeight + 40
+      );
     };
     new ResizeObserver(report).observe(document.body);
     addEventListener("load", report);
@@ -207,7 +232,7 @@ function closeBio() {
   photoStrip.classList.remove("hidden");
   status.classList.remove("hidden");
   render();
-  window.scrollTo({ top: 0 });
+  scrollToTop();
 }
 
 function backButton() {
@@ -269,7 +294,7 @@ function showBio(entry) {
   submitBar.classList.add("hidden");
   pickBanner.classList.add("hidden");
   bioPage.classList.remove("hidden");
-  window.scrollTo({ top: 0 });
+  scrollToTop();
 }
 
 function renderPhotoStrip(rows) {
@@ -331,7 +356,7 @@ function showVoterForm() {
   submitBar.classList.add("hidden");
   pickBanner.classList.add("hidden");
   voterPage.classList.remove("hidden");
-  window.scrollTo({ top: 0 });
+  scrollToTop();
   if (!voterName.value) voterName.focus();
 }
 
@@ -342,7 +367,7 @@ function closeVoterForm() {
   photoStrip.classList.remove("hidden");
   status.classList.remove("hidden");
   render();
-  window.scrollTo({ top: 0 });
+  scrollToTop();
 }
 
 function voterFormError(message) {

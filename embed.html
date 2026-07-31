@@ -67,6 +67,20 @@
         max-width: 100%;
         margin: 0 auto;
       }
+      /* Set when the widget is in a frame that won't grow to fit it. The
+         frame's own viewport can't scroll (embeds are often scrolling="no"),
+         so the widget scrolls itself and nothing is stranded off the end. */
+      html.frame-scroll,
+      html.frame-scroll body {
+        height: 100%;
+        overflow: hidden;
+      }
+      html.frame-scroll .widget {
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
       /* Header */
       .head {
         text-align: center;
