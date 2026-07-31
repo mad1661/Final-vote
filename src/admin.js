@@ -25,6 +25,8 @@ import {
   getNominations,
   getVoters,
   loadDivisionAssets,
+  loadVoteLogos,
+  saveVoteLogo,
   mergeCandidates,
   reassignNomination,
   removeName,
@@ -612,7 +614,9 @@ editorPhotoFile.addEventListener("change", async () => {
   editorStatus.textContent = "Uploading photo…";
   try {
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const ref = storageRef(storage, `candidates/${editingId}.${ext}`);
+    // Under division-assets/: the deployed Storage rules only allow signed-in
+    // writes beneath that prefix (and nominations/), and public reads.
+    const ref = storageRef(storage, `division-assets/candidates/${editingId}.${ext}`);
     const snap = await uploadBytes(ref, file);
     editorPhotoUrl.value = await getDownloadURL(snap.ref);
     updatePreview();
@@ -693,6 +697,104 @@ document.getElementById("clear-votes").addEventListener("click", async () => {
   } catch (err) {
     console.error("Vote reset failed:", err);
     freshStatus.textContent = "Vote reset failed — check your admin access.";
+  }
+});
+
+/* ---------- Header logo ---------- */
+
+const logoPreview = document.getElementById("logo-preview");
+const logoDivision = document.getElementById("logo-division");
+const logoUrlInput = document.getElementById("logo-url");
+const logoStatus = document.getElementById("logo-status");
+let voteLogos = {};
+
+function showLogoForDivision() {
+  const d = Number(logoDivision.value);
+  const url = voteLogos[d] || voteLogos[0] || "";
+  logoPreview.src = url || "/nhra-75-logo.png";
+  logoUrlInput.value = voteLogos[d] ?? "";
+  if (d !== 0 && !voteLogos[d] && voteLogos[0]) {
+    logoStatus.textContent = "Division 1–7 shown here uses the all-divisions logo.";
+  } else if (!voteLogos[0] && !voteLogos[d]) {
+    logoStatus.textContent = "No logo uploaded yet — the 75th anniversary logo is showing.";
+  } else {
+    logoStatus.textContent = "";
+  }
+}
+
+async function refreshLogos() {
+  try {
+    voteLogos = await loadVoteLogos();
+  } catch (err) {
+    console.error("Logo load failed:", err);
+    voteLogos = {};
+  }
+  showLogoForDivision();
+}
+
+async function applyLogo(url) {
+  const division = Number(logoDivision.value);
+  await saveVoteLogo(url, division);
+  voteLogos = { ...voteLogos, [division]: url };
+  if (!url) delete voteLogos[division];
+  showLogoForDivision();
+  const where = division === 0 ? "every division" : `Division ${division}`;
+  logoStatus.textContent = url
+    ? `Saved — ${where} now shows this logo. Reload the vote page to see it.`
+    : `Cleared — ${where} is back to the default logo.`;
+}
+
+logoDivision.addEventListener("change", showLogoForDivision);
+
+document.getElementById("logo-file").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    logoStatus.textContent = "That image is over 10 MB — please use a smaller file.";
+    e.target.value = "";
+    return;
+  }
+  logoStatus.textContent = "Uploading…";
+  try {
+    const division = Number(logoDivision.value);
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const name = division ? `51-legends-d${division}` : "51-legends";
+    const snap = await uploadBytes(
+      storageRef(storage, `division-assets/vote/${name}.${ext}`),
+      file
+    );
+    await applyLogo(await getDownloadURL(snap.ref));
+  } catch (err) {
+    console.error("Logo upload failed:", err);
+    logoStatus.textContent =
+      "Upload failed — check that Storage rules let the admin write, or paste an image URL instead.";
+  } finally {
+    e.target.value = "";
+  }
+});
+
+document.getElementById("logo-save").addEventListener("click", async () => {
+  const url = logoUrlInput.value.trim();
+  if (!url) {
+    logoStatus.textContent = "Paste an image URL first, or use the upload button.";
+    return;
+  }
+  logoStatus.textContent = "Saving…";
+  try {
+    await applyLogo(url);
+  } catch (err) {
+    console.error("Logo save failed:", err);
+    logoStatus.textContent = "Save failed — check your admin access.";
+  }
+});
+
+document.getElementById("logo-clear").addEventListener("click", async () => {
+  logoStatus.textContent = "Clearing…";
+  try {
+    await applyLogo("");
+  } catch (err) {
+    console.error("Logo clear failed:", err);
+    logoStatus.textContent = "Clear failed — check your admin access.";
   }
 });
 
@@ -1036,6 +1138,7 @@ onAuthStateChanged(auth, (user) => {
     renderHead();
     renderSnippets();
     reportVoterGate();
+    refreshLogos();
     stopWatching?.();
     stopWatching = watchBoard((next) => {
       board = next;

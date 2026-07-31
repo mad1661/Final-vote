@@ -136,6 +136,20 @@ service cloud.firestore {
 Visitors can read and cast +1 votes; only the admin can manage names or read
 the voter list.
 
+## Header logo
+
+The '51 Legends shield at the top of the vote page and every embedded widget
+is uploaded from the vote admin's **Header logo** section — no file copying
+or redeploy needed. It saves to Storage under `division-assets/vote/` (the
+prefix the deployed Storage rules already allow the admin to write) and
+records the URL in `divisionAssets/vote51`, a doc the nomination app never
+touches. Choosing a single division instead writes `divisionAssets/vote51_d{n}`
+and only that division's ballot changes.
+
+If nothing is uploaded the widget falls back, in order, to
+`/51-legends-d{division}.png`, `/51-legends.png`, the nomination app's
+`logo75` asset, and finally `/nhra-75-logo.png`.
+
 ## Embedding in division sites
 
 One universal snippet works on every division site — the widget detects the

@@ -593,19 +593,29 @@ if (!DIVISIONS.includes(division)) {
 } else {
   divLine.textContent = `of the ${DIVISION_NAMES[division]}`;
   document.title = `'51 Legends — ${DIVISION_NAMES[division]}`;
-  // Main logo: the '51 Legends sponsor shield. Tries the division-specific
-  // file, then a shared one, then divisionAssets/75th logo fallbacks.
-  let logoLocked = false;
-  const logoFallbacks = [`/51-legends.png`, `/nhra-75-logo.png`];
-  logoEl.onload = () => {
-    logoLocked = !logoEl.src.endsWith("/nhra-75-logo.png");
-  };
-  logoEl.onerror = () => {
-    const next = logoFallbacks.shift();
-    if (next) logoEl.src = next;
-    else logoEl.onerror = null;
-  };
-  logoEl.src = `/51-legends-d${division}.png`;
+  // Main logo: the '51 Legends sponsor shield. The one uploaded in the vote
+  // admin wins for every division; otherwise a file hosted alongside the
+  // nomination app, then the 75th logo as a last resort. Each candidate
+  // falls through to the next if it fails to load.
+  const hostedLogos = [
+    `/51-legends-d${division}.png`,
+    `/51-legends.png`,
+    `/nhra-75-logo.png`,
+  ];
+  function setLogo(urls) {
+    const queue = urls.filter(Boolean);
+    const next = () => {
+      const url = queue.shift();
+      if (url === undefined) {
+        logoEl.onerror = null;
+        return;
+      }
+      logoEl.src = url;
+    };
+    logoEl.onerror = next;
+    next();
+  }
+  setLogo(hostedLogos);
 
   // Division badge (D1..D7 images hosted alongside the nomination app),
   // preferring the small variant and falling back to the full-size one.
@@ -619,7 +629,9 @@ if (!DIVISIONS.includes(division)) {
   badge.onload = () => (badge.style.display = "block");
   if (!DEMO) {
     loadDivisionAssets(division).then((assets) => {
-      if (assets.logo75 && !logoLocked) logoEl.src = assets.logo75;
+      if (assets.logo51 || assets.logo75) {
+        setLogo([assets.logo51, ...hostedLogos.slice(0, 2), assets.logo75, ...hostedLogos.slice(2)]);
+      }
       if (assets.logo) badge.src = assets.logo;
     });
   }

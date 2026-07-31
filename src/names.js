@@ -414,20 +414,50 @@ export async function clearCollection(name) {
 }
 
 // Division branding ('51 Legends logos etc.) from the nomination app's
-// divisionAssets collection, falling back to the shared default doc.
+// divisionAssets collection, falling back to the shared default doc. The
+// vote's own header logo lives in docs the nomination app never touches
+// (`vote51` for every division, `vote51_d{n}` to override just one), so
+// uploading it here can't disturb the original site's assets.
+export function voteLogoDocId(division = 0) {
+  return division ? `vote51_d${division}` : "vote51";
+}
+
 export async function loadDivisionAssets(division) {
   try {
-    const [divSnap, defSnap] = await Promise.all([
-      getDoc(doc(db, "divisionAssets", String(division))),
-      getDoc(doc(db, "divisionAssets", "default")),
-    ]);
-    return {
-      ...(defSnap.exists() ? defSnap.data() : {}),
-      ...(divSnap.exists() ? divSnap.data() : {}),
-    };
+    const ids = ["default", String(division), "vote51", voteLogoDocId(division)];
+    const snaps = await Promise.all(
+      ids.map((id) => getDoc(doc(db, "divisionAssets", id)))
+    );
+    return snaps.reduce(
+      (merged, snap) => (snap.exists() ? { ...merged, ...snap.data() } : merged),
+      {}
+    );
   } catch {
     return {};
   }
+}
+
+// Admin: set the header logo for every division (division 0) or for one.
+export async function saveVoteLogo(url, division = 0) {
+  await setDoc(
+    doc(db, "divisionAssets", voteLogoDocId(division)),
+    { logo51: url, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// Admin: the header logo currently set for all divisions and per division.
+export async function loadVoteLogos() {
+  const ids = [0, ...DIVISIONS];
+  const snaps = await Promise.all(
+    ids.map((d) => getDoc(doc(db, "divisionAssets", voteLogoDocId(d))))
+  );
+  const out = {};
+  snaps.forEach((snap, i) => {
+    const url = snap.exists() ? snap.data().logo51 : "";
+    if (url) out[ids[i]] = url;
+  });
+  return out;
 }
 
 // Calls `callback` with { byDivision, votes } on every change:
