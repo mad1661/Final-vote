@@ -926,8 +926,16 @@ function snippetRow(html, label) {
   return row;
 }
 
+// Grows the frame to fit, and tells the widget where the visitor's screen
+// is so the Submit button can follow it down the page.
 const RESIZE_SCRIPT =
-  '<script>window.addEventListener("message",function(e){if(!e.data||!e.data.legendVoteHeight)return;document.querySelectorAll("iframe[data-legend-vote]").forEach(function(f){if(f.contentWindow===e.source)f.style.height=e.data.legendVoteHeight+"px"})});</' + "script>";
+  '<script>(function(){function f(){return document.querySelectorAll("iframe[data-legend-vote]")}' +
+  'window.addEventListener("message",function(e){if(!e.data||!e.data.legendVoteHeight)return;' +
+  'f().forEach(function(i){if(i.contentWindow===e.source)i.style.height=e.data.legendVoteHeight+"px"})});' +
+  'function v(){f().forEach(function(i){var r=i.getBoundingClientRect();' +
+  'i.contentWindow.postMessage({legendVoteView:{top:r.top,viewH:window.innerHeight}},"*")})}' +
+  'addEventListener("scroll",v,{passive:true});addEventListener("resize",v);setInterval(v,400);v()})();</' +
+  "script>";
 
 function renderSnippets() {
   const base = `${location.origin}/embed.html`;

@@ -87,6 +87,32 @@ function scrollToTop() {
   }
 }
 
+// The host page reports where the visitor's screen is over our content (see
+// the snippet's script). A cross-origin frame can't work that out for
+// itself, and without it the pick banner — which carries the Submit button —
+// scrolls off with the rest of the page. With it, the banner rides along.
+let hostTracking = false;
+
+function trackHostView(view) {
+  const banner = document.getElementById("pick-banner");
+  if (!banner || banner.classList.contains("hidden")) return;
+  hostTracking = true;
+  document.documentElement.classList.remove("frame-scroll");
+  const visibleStart = Math.max(0, -view.top);
+  const natural = banner.offsetTop;
+  const maxShift = Math.max(
+    0,
+    widgetEl.scrollHeight - banner.offsetHeight - natural - 16
+  );
+  const shift = Math.min(Math.max(visibleStart + 8 - natural, 0), maxShift);
+  banner.style.transform = shift > 0 ? `translateY(${Math.round(shift)}px)` : "";
+}
+
+addEventListener("message", (e) => {
+  const view = e.data?.legendVoteView;
+  if (view && typeof view.top === "number") trackHostView(view);
+});
+
 try {
   if (window.self !== window.top) {
     const report = () => {
@@ -104,9 +130,11 @@ try {
       // past that height is unreachable, and with scrolling="no" it can't
       // even be scrolled to. Give the widget its own scrollbar so the whole
       // ballot stays usable. Undone automatically if the frame does grow.
+      // Not needed when the host reports our screen position: then the frame
+      // grows, the page scrolls as one, and the banner tracks the screen.
       document.documentElement.classList.toggle(
         "frame-scroll",
-        widgetEl.scrollHeight > window.innerHeight + 40
+        !hostTracking && widgetEl.scrollHeight > window.innerHeight + 40
       );
     };
     new ResizeObserver(report).observe(document.body);

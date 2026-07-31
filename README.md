@@ -161,13 +161,28 @@ division from the embedding site's domain (`nhradiv1.com` → Division 1,
 `nhradiv2.com` → Division 2, … any `div<1-7>`/`division<1-7>` in the
 hostname):
 
+Copy the snippet from the vote admin's iframe creator — it pairs the frame
+with a short script:
+
 ```html
 <iframe
-  src="https://legendvote-final.web.app/embed.html"
-  title="Legend Vote"
-  style="width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13"
+  data-legend-vote
+  src="https://voting-10a21.web.app/embed.html"
+  title="'51 Legends Vote"
+  style="width:100%;height:900px;border:0;border-radius:16px;background:#000"
 ></iframe>
+<script>/* grows the frame + reports the visitor's screen position */</script>
 ```
+
+The script does two jobs. It grows the frame to fit the ballot, so the page
+scrolls as one with no inner scrollbar. And on scroll it posts the frame's
+position back to the widget — a cross-origin frame can't see the parent's
+scroll — which is what lets the Submit button ride down the screen instead
+of scrolling out of view.
+
+Both are graceful about being absent. Without the script the widget notices
+the frame isn't growing and gives itself a scrollbar, so the whole ballot is
+still reachable; the Submit button then stays pinned inside the widget.
 
 If a site's domain doesn't contain its division number, pin it explicitly
 with `embed.html?div=N` (the admin page has copy buttons for both forms).
