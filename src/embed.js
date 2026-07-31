@@ -73,10 +73,15 @@ const division = detected.division ?? (DEMO ? 1 : null);
 try {
   if (window.self !== window.top) {
     const report = () => {
-      parent.postMessage(
-        { legendVoteHeight: document.documentElement.scrollHeight },
-        "*"
-      );
+      const height = document.documentElement.scrollHeight;
+      // Walk every ancestor, not just the immediate parent: site builders
+      // often wrap an embed in their own frame, and the page holding the
+      // resize script is then two levels up.
+      let frame = window;
+      for (let i = 0; i < 6 && frame !== window.top; i++) {
+        frame = frame.parent;
+        frame.postMessage({ legendVoteHeight: height }, "*");
+      }
     };
     new ResizeObserver(report).observe(document.body);
     addEventListener("load", report);
@@ -92,6 +97,7 @@ const divLine = document.getElementById("div-line");
 const logoEl = document.getElementById("logo");
 const submitBar = document.getElementById("submit-bar");
 const submitBtn = document.getElementById("submit-btn");
+const submitTop = document.getElementById("submit-top");
 const overlay = document.getElementById("overlay");
 const foot = document.getElementById("foot");
 const photoStrip = document.getElementById("photo-strip");
@@ -548,10 +554,12 @@ function render() {
     pickBanner.classList.remove("hidden");
     const n = picks.size;
     pickCount.textContent = `${n} of ${MAX_PICKS} selected`;
-    status.textContent = "Tap names to select, then hit submit at the bottom.";
+    status.textContent = "Tap names to select, then hit submit.";
     submitBtn.disabled = n === 0;
     submitBtn.textContent =
       n === 0 ? `Pick up to ${MAX_PICKS}` : `Submit ${n} vote${n === 1 ? "" : "s"}`;
+    submitTop.disabled = n === 0;
+    submitTop.textContent = n === 0 ? "Submit" : `Submit ${n}`;
   }
 }
 
@@ -567,10 +575,12 @@ function togglePick(id) {
   render();
 }
 
-submitBtn.addEventListener("click", () => {
-  if (picks.size === 0) return;
-  showVoterForm();
-});
+for (const btn of [submitBtn, submitTop]) {
+  btn.addEventListener("click", () => {
+    if (picks.size === 0) return;
+    showVoterForm();
+  });
+}
 
 function renderDivisionChooser() {
   divLine.textContent = "Choose your division";

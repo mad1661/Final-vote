@@ -151,36 +151,89 @@
         background: linear-gradient(90deg, transparent, var(--accent) 25%, var(--accent) 75%, transparent);
         margin: 0.9rem 0;
       }
+      /* Pick banner — carries the submit button so it is always reachable
+         at the top, even in a frame that can't grow or scroll */
       .pick-banner {
         position: sticky;
-        top: 0.5rem;
+        top: 0;
         z-index: 20;
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 0.8rem;
-        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.6rem;
         background: linear-gradient(135deg, var(--accent-2), #b00d15);
         color: #fff;
         border-radius: var(--r-md);
-        padding: 0.75rem 1rem;
-        margin: 0 0 0.85rem;
+        padding: 0.5rem 0.6rem 0.5rem 0.85rem;
+        margin: 0 0 0.7rem;
         box-shadow: 0 8px 26px var(--accent-glow);
-        text-align: center;
+      }
+      .pick-text {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.6rem;
+        min-width: 0;
       }
       .pick-banner b {
-        font-size: clamp(1.05rem, 3.5vw, 1.35rem);
+        font-size: clamp(0.88rem, 3vw, 1.25rem);
         font-weight: 700;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
+        line-height: 1.1;
       }
       .pick-banner span {
         font-family: var(--font-mono);
-        font-size: 0.8rem;
-        letter-spacing: 0.1em;
+        font-size: 0.66rem;
+        letter-spacing: 0.08em;
         background: rgba(0, 0, 0, 0.28);
-        padding: 0.3rem 0.75rem;
+        padding: 0.22rem 0.55rem;
         border-radius: 999px;
+        white-space: nowrap;
+      }
+      .pick-submit {
+        flex: none;
+        font-family: var(--font);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.78rem;
+        padding: 0.6rem 1rem;
+        border: none;
+        border-radius: 999px;
+        background: #fff;
+        color: #c00511;
+        cursor: pointer;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+        transition: opacity 0.15s ease;
+      }
+      .pick-submit:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      @media (max-width: 430px) {
+        .pick-banner {
+          padding: 0.45rem 0.45rem 0.45rem 0.7rem;
+          gap: 0.45rem;
+          margin-bottom: 0.6rem;
+        }
+        .pick-text {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.12rem;
+        }
+        .pick-banner b {
+          font-size: 0.86rem;
+          letter-spacing: 0.05em;
+        }
+        .pick-banner span {
+          font-size: 0.6rem;
+          padding: 0.12rem 0.45rem;
+        }
+        .pick-submit {
+          font-size: 0.72rem;
+          padding: 0.55rem 0.85rem;
+        }
       }
       #status {
         color: var(--text-2);
@@ -382,17 +435,14 @@
         padding: 0.55rem 1rem;
         border-radius: var(--r-sm);
       }
-      /* Submit bar — sticky in the page flow so it can never be clipped
-         by an iframe and is always reachable at the bottom of the view */
+      /* Second submit at the end of the list. Deliberately in normal flow:
+         a floating bar is unreachable inside a frame that can't scroll or
+         grow, which is why the banner at the top carries a submit too. */
       .submit-bar {
-        position: sticky;
-        bottom: 0;
         display: flex;
         justify-content: center;
         padding: 0.7rem 0 calc(0.7rem + env(safe-area-inset-bottom));
         margin-top: 0.8rem;
-        background: linear-gradient(180deg, transparent, var(--bg) 45%);
-        z-index: 30;
       }
       .submit-btn {
         width: min(92%, 420px);
@@ -667,8 +717,11 @@
       </div>
       <div class="rule"></div>
       <div class="pick-banner hidden" id="pick-banner">
-        <b>Pick your top 5 legends</b>
-        <span id="pick-count">0 of 5 selected</span>
+        <div class="pick-text">
+          <b>Pick your top 5 legends</b>
+          <span id="pick-count">0 of 5 selected</span>
+        </div>
+        <button class="pick-submit" id="submit-top" disabled>Submit</button>
       </div>
       <p id="status">Loading…</p>
       <ul id="list"></ul>

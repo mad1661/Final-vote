@@ -937,7 +937,7 @@ function renderSnippets() {
   const universalNote = document.createElement("p");
   universalNote.className = "hint";
   universalNote.textContent =
-    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, …) and shows that division's ballot automatically. The included script grows the frame to fit, so the page scrolls smoothly with no inner scrollbar. Add ?theme=light for light-colored sites.";
+    "One snippet for every division site — the widget reads the site's domain (nhradiv1.com → Division 1, …) and shows that division's ballot automatically. The included script grows the frame to fit so the page scrolls as one; if a site builder strips the script, the frame stays scrollable and the Submit button sits at the top of the ballot either way. Add ?theme=light for light-colored sites.";
 
   const overrideNote = document.createElement("p");
   overrideNote.className = "hint";
@@ -947,13 +947,13 @@ function renderSnippets() {
   snippetsEl.replaceChildren(
     universalNote,
     snippetRow(
-      `<iframe data-legend-vote src="${base}" title="'51 Legends Vote" scrolling="no" style="${style}"></iframe>${RESIZE_SCRIPT}`,
+      `<iframe data-legend-vote src="${base}" title="'51 Legends Vote" style="${style}"></iframe>${RESIZE_SCRIPT}`,
       "Copy universal"
     ),
     overrideNote,
     ...DIVISIONS.map((d) =>
       snippetRow(
-        `<iframe data-legend-vote src="${base}?div=${d}" title="'51 Legends Vote — Division ${d}" scrolling="no" style="${style}"></iframe>${RESIZE_SCRIPT}`,
+        `<iframe data-legend-vote src="${base}?div=${d}" title="'51 Legends Vote — Division ${d}" style="${style}"></iframe>${RESIZE_SCRIPT}`,
         `Copy D${d}`
       )
     )
