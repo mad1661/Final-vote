@@ -3,11 +3,15 @@ import {
   DIVISIONS,
   DIVISION_NAMES,
   MAX_PICKS,
+  alreadyVoted,
   castVotes,
   divisionCount,
   hasVoted,
+  isValidEmail,
   loadDivisionAssets,
   markVoted,
+  saveVoter,
+  savedVoter,
   votedFor,
   watchBoard,
 } from "./names.js";
@@ -59,7 +63,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v10";
+const VERSION = "v11";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -93,6 +97,13 @@ const foot = document.getElementById("foot");
 const photoStrip = document.getElementById("photo-strip");
 const pickBanner = document.getElementById("pick-banner");
 const pickCount = document.getElementById("pick-count");
+const voterPage = document.getElementById("voter-page");
+const picksList = document.getElementById("picks-list");
+const voterName = document.getElementById("voter-name");
+const voterEmail = document.getElementById("voter-email");
+const voterError = document.getElementById("voter-error");
+const voterSubmit = document.getElementById("voter-submit");
+const voterBack = document.getElementById("voter-back");
 foot.textContent = `Live results · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
 
 let board = { byDivision: {}, votes: new Map() };
@@ -285,8 +296,116 @@ function renderPhotoStrip(rows) {
   }
 }
 
+/* ---------- Confirm step: name + email, one ballot per person ---------- */
+
+let voterOpen = false;
+
+function nameFor(id) {
+  return (board.byDivision[division] ?? []).find((e) => e.id === id)?.name ?? id;
+}
+
+function showVoterForm() {
+  voterOpen = true;
+  picksList.replaceChildren(
+    ...[...picks].map((id) => {
+      const li = document.createElement("li");
+      li.textContent = nameFor(id);
+      return li;
+    })
+  );
+  const saved = savedVoter();
+  if (!voterName.value) voterName.value = saved.name ?? "";
+  if (!voterEmail.value) voterEmail.value = saved.email ?? "";
+  voterError.classList.add("hidden");
+  voterSubmit.disabled = false;
+  voterSubmit.textContent = `Cast my ${picks.size} vote${picks.size === 1 ? "" : "s"}`;
+  listEl.classList.add("hidden");
+  photoStrip.classList.add("hidden");
+  status.classList.add("hidden");
+  submitBar.classList.add("hidden");
+  pickBanner.classList.add("hidden");
+  voterPage.classList.remove("hidden");
+  window.scrollTo({ top: 0 });
+  if (!voterName.value) voterName.focus();
+}
+
+function closeVoterForm() {
+  voterOpen = false;
+  voterPage.classList.add("hidden");
+  listEl.classList.remove("hidden");
+  photoStrip.classList.remove("hidden");
+  status.classList.remove("hidden");
+  render();
+  window.scrollTo({ top: 0 });
+}
+
+function voterFormError(message) {
+  voterError.textContent = message;
+  voterError.classList.remove("hidden");
+  voterSubmit.disabled = false;
+  voterSubmit.textContent = "Try again";
+}
+
+voterBack.addEventListener("click", closeVoterForm);
+
+voterSubmit.addEventListener("click", async () => {
+  const name = voterName.value.trim();
+  const email = voterEmail.value.trim();
+  if (name.length < 2) {
+    voterFormError("Please enter your name.");
+    voterName.focus();
+    return;
+  }
+  if (!isValidEmail(email)) {
+    voterFormError("Please enter a valid email address.");
+    voterEmail.focus();
+    return;
+  }
+  voterSubmit.disabled = true;
+  voterSubmit.textContent = "Submitting…";
+  saveVoter({ name, email });
+
+  if (DEMO) {
+    for (const id of picks) {
+      const perName = board.votes.get(id) ?? {};
+      perName[division] = (perName[division] ?? 0) + 1;
+      board.votes.set(id, perName);
+    }
+    submitted = true;
+    closeVoterForm();
+    return;
+  }
+
+  try {
+    if (await alreadyVoted(email, division)) {
+      voterFormError(
+        `${email} has already voted in ${DIVISION_NAMES[division]}. Each person gets one ballot.`
+      );
+      return;
+    }
+    await castVotes([...picks], division, { name, email });
+    markVoted(division, [...picks]);
+    submitted = true;
+    closeVoterForm();
+  } catch (err) {
+    console.error("Vote failed:", err);
+    // A rejected write is either a second ballot from this address or
+    // rules that aren't published yet — re-check so the voter is told
+    // which one it is.
+    if (err?.code === "permission-denied" && (await alreadyVoted(email, division))) {
+      voterFormError(
+        `${email} has already voted in ${DIVISION_NAMES[division]}. Each person gets one ballot.`
+      );
+    } else if (err?.code === "permission-denied") {
+      voterFormError("Voting isn't open yet — please try again later.");
+    } else {
+      voterFormError("Could not record your votes — please try again.");
+    }
+  }
+});
+
 function render() {
-  if (bioOpen) return;
+  if (bioOpen || voterOpen) return;
   const voted = submitted || (DEMO ? false : hasVoted(division));
   const mine = new Set(DEMO && submitted ? picks : votedFor(division));
   if (submitted) picks.forEach((p) => mine.add(p));
@@ -448,31 +567,9 @@ function togglePick(id) {
   render();
 }
 
-submitBtn.addEventListener("click", async () => {
+submitBtn.addEventListener("click", () => {
   if (picks.size === 0) return;
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Submitting…";
-  if (DEMO) {
-    for (const id of picks) {
-      const perName = board.votes.get(id) ?? {};
-      perName[division] = (perName[division] ?? 0) + 1;
-      board.votes.set(id, perName);
-    }
-    submitted = true;
-    render();
-    return;
-  }
-  try {
-    await castVotes([...picks], division);
-    markVoted(division, [...picks]);
-    submitted = true;
-    render();
-  } catch (err) {
-    console.error("Vote failed:", err);
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Try again";
-    status.textContent = "Could not record your votes — please try again.";
-  }
+  showVoterForm();
 });
 
 function renderDivisionChooser() {

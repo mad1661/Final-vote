@@ -19,9 +19,11 @@ import {
   DIVISIONS,
   addNames,
   addNominations,
+  checkVoterGate,
   clearCollection,
   divisionCount,
   getNominations,
+  getVoters,
   loadDivisionAssets,
   mergeCandidates,
   reassignNomination,
@@ -684,18 +686,100 @@ document.getElementById("clear-votes").addEventListener("click", async () => {
   freshStatus.textContent = "Resetting votes…";
   try {
     const n = await clearCollection("votes");
-    freshStatus.textContent = `Done — ${n} vote tallies deleted. Everyone starts at zero.`;
+    // Voter records go too, or nobody could cast a ballot the second time.
+    const voters = await clearCollection("voters");
+    await clearCollection("voted");
+    freshStatus.textContent = `Done — ${n} vote tallies deleted and ${voters} voter record${voters === 1 ? "" : "s"} cleared. Everyone starts at zero and can vote again.`;
   } catch (err) {
     console.error("Vote reset failed:", err);
     freshStatus.textContent = "Vote reset failed — check your admin access.";
   }
 });
 
+/* ---------- Voter gate health ---------- */
+
+// Voters must give a name and email, and each email gets one ballot per
+// division. That is enforced by the Firestore rules, so if the rules
+// haven't been published every ballot is rejected — say so loudly.
+async function reportVoterGate() {
+  const banner = document.getElementById("gate-banner");
+  banner.className = "gate checking";
+  banner.textContent = "Checking the one-vote-per-person rules…";
+  const result = await checkVoterGate();
+  if (result.ok) {
+    banner.className = "gate ok";
+    banner.textContent =
+      "One vote per person is ON — voters enter a name and email, and each email gets one ballot per division.";
+    return;
+  }
+  banner.className = "gate bad";
+  banner.replaceChildren();
+  const b = document.createElement("b");
+  b.textContent = "Voting is blocked — the Firestore rules need updating. ";
+  const rest = document.createElement("span");
+  rest.textContent =
+    `Nobody can submit a ballot until the rules that allow voter records are published (${result.code}). ` +
+    "Open the Firestore rules page and paste the block from the project README, then reload this page.";
+  const link = document.createElement("a");
+  link.href = "https://console.firebase.google.com/project/voting-10a21/firestore/rules";
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.textContent = "Open Firestore rules →";
+  banner.append(b, rest, link);
+}
+
 /* ---------- Export ---------- */
+
+const csvEscape = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+
+function downloadCsv(lines, filename) {
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Who voted, when, and for whom — one row per ballot.
+document.getElementById("export-voters").addEventListener("click", async () => {
+  const btn = document.getElementById("export-voters");
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+  try {
+    const voters = await getVoters();
+    const nameOf = (id) => unionCandidates().get(id)?.name ?? id;
+    const lines = [
+      ["Voter name", "Email", "Division", "Voted at", "Picks"].map(csvEscape).join(","),
+    ];
+    for (const v of voters) {
+      const when = v.createdAt?.toDate ? v.createdAt.toDate().toISOString() : "";
+      lines.push(
+        [
+          v.name,
+          v.email,
+          v.division,
+          when,
+          (v.picks ?? []).map(nameOf).join("; "),
+        ].map(csvEscape).join(",")
+      );
+    }
+    downloadCsv(lines, `legend-vote-voters-${new Date().toISOString().slice(0, 10)}.csv`);
+    btn.textContent = `${voters.length} voter${voters.length === 1 ? "" : "s"} exported`;
+    setTimeout(() => (btn.textContent = label), 4000);
+  } catch (err) {
+    console.error("Voter export failed:", err);
+    btn.textContent = "Export failed — check access";
+    setTimeout(() => (btn.textContent = label), 4000);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 document.getElementById("export-csv").addEventListener("click", () => {
   const union = unionCandidates();
-  const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+  const esc = csvEscape;
   const lines = [
     ["Name", "Category", ...DIVISIONS.map((d) => `D${d} votes`), "Total votes", "Nominations", "Divisions"].map(esc).join(","),
   ];
@@ -714,13 +798,7 @@ document.getElementById("export-csv").addEventListener("click", () => {
       ].map(esc).join(",")
     );
   }
-  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.download = `legend-vote-results-${stamp}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  downloadCsv(lines, `legend-vote-results-${new Date().toISOString().slice(0, 10)}.csv`);
 });
 
 /* ---------- Iframe creator ---------- */
@@ -957,6 +1035,7 @@ onAuthStateChanged(auth, (user) => {
     adminUi.classList.remove("hidden");
     renderHead();
     renderSnippets();
+    reportVoterGate();
     stopWatching?.();
     stopWatching = watchBoard((next) => {
       board = next;

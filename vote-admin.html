@@ -163,6 +163,35 @@
         padding: 0.3rem 0.7rem;
         font-size: 0.68rem;
       }
+      /* One-vote-per-person status */
+      .gate {
+        margin-top: 1.2rem;
+        border-radius: var(--r-md);
+        padding: 0.75rem 1rem;
+        font-size: 0.88rem;
+        line-height: 1.45;
+      }
+      .gate.checking {
+        background: var(--surface);
+        color: var(--text-3);
+      }
+      .gate.ok {
+        background: rgba(46, 160, 90, 0.16);
+        color: #9be0b4;
+      }
+      .gate.bad {
+        background: rgba(227, 6, 19, 0.18);
+        color: #ffc9cd;
+        box-shadow: inset 0 0 0 1px rgba(227, 6, 19, 0.5);
+      }
+      .gate.bad b {
+        color: #fff;
+      }
+      .gate a {
+        color: #fff;
+        margin-left: 0.4rem;
+        white-space: nowrap;
+      }
       /* Stats */
       .stats {
         display: flex;
@@ -463,6 +492,8 @@
           </span>
         </div>
 
+        <div id="gate-banner" class="gate checking">Checking the one-vote-per-person rules…</div>
+
         <div class="stats">
           <div class="stat"><b id="stat-names">–</b><span>Candidates</span></div>
           <div class="stat"><b id="stat-noms">–</b><span>Nominations</span></div>
@@ -488,6 +519,7 @@
           <p id="count-line"></p>
           <div class="row" style="margin-bottom: 0.6rem">
             <button id="export-csv" class="btn secondary small">Export votes (CSV)</button>
+            <button id="export-voters" class="btn secondary small">Export voters (CSV)</button>
             <select id="division-filter">
               <option value="0">All divisions</option>
               <option value="1">Division 1 ballot</option>
@@ -555,12 +587,13 @@
             every nomination whose name was changed by a merge or move
             (recovered from the uploaded photo's filename — nominations
             without photos keep their current name). The other two buttons
-            optionally clear admin overrides and vote tallies.
+            optionally clear admin overrides, and reset every tally plus the
+            voter list (so everyone can cast a fresh ballot).
           </p>
           <div class="row">
             <button id="restore-noms" class="btn">Restore names from original submissions</button>
             <button id="clear-names" class="btn secondary">Clear admin-added names &amp; bios</button>
-            <button id="clear-votes" class="btn danger">Reset ALL votes to zero</button>
+            <button id="clear-votes" class="btn danger">Reset ALL votes &amp; voters</button>
           </div>
           <p id="fresh-status" class="hint"></p>
         </section>

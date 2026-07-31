@@ -38,6 +38,13 @@ export const NAMES_COLLECTION = "names";
 const NAMES = collection(db, NAMES_COLLECTION);
 const NOMINATIONS = collection(db, "nominations");
 const VOTES = collection(db, "votes");
+// Who voted: `voters` holds the name/email (admin-only reading), `voted`
+// holds a PII-free marker the widget can check before submitting. Both are
+// create-only, so a second ballot for the same email is rejected by the
+// rules — and because the tallies are written in the same batch, the whole
+// ballot fails with it.
+const VOTERS = collection(db, "voters");
+const VOTED = collection(db, "voted");
 
 export function slugify(name) {
   return name
@@ -146,22 +153,153 @@ export async function removeName(id, nominationDocIds = []) {
   await batch.commit();
 }
 
-// Cast one ballot: +1 for each picked name in the division.
-export async function castVotes(ids, division) {
+export function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(String(email ?? "").trim());
+}
+
+// Normalize an address so one inbox is one ballot: Gmail ignores dots and
+// anything after a `+`, so `m.ark+vote@gmail.com` is the same person as
+// `mark@gmail.com` and must not get a second vote.
+export function normalizeEmail(email) {
+  const clean = String(email ?? "").trim().toLowerCase();
+  const at = clean.lastIndexOf("@");
+  if (at < 1) return "";
+  let local = clean.slice(0, at);
+  let domain = clean.slice(at + 1);
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (domain === "gmail.com") {
+    local = local.split("+")[0].replaceAll(".", "");
+  }
+  return `${local}@${domain}`;
+}
+
+// The voter id stored in Firestore is a hash, so the public marker
+// collection never exposes anyone's address.
+async function hashEmail(normalized) {
+  if (globalThis.crypto?.subtle) {
+    const bytes = new TextEncoder().encode(`legend-vote:${normalized}`);
+    const buf = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(buf)]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 32);
+  }
+  let h = 0x811c9dc5; // FNV-1a, for the rare insecure context
+  for (let i = 0; i < normalized.length; i++) {
+    h ^= normalized.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return `f${h.toString(16)}`;
+}
+
+export async function voterId(email, division) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return "";
+  return `d${division}_${await hashEmail(normalized)}`;
+}
+
+// Has this address already voted in this division? Checked before writing
+// so a repeat voter gets a clear message instead of a rules error.
+export async function alreadyVoted(email, division) {
+  const id = await voterId(email, division);
+  if (!id) return false;
+  try {
+    return (await getDoc(doc(VOTED, id))).exists();
+  } catch {
+    return false; // marker unreadable — the write itself still enforces it
+  }
+}
+
+// Cast one ballot: the voter's record, the public one-per-email marker, and
+// +1 for each picked name — one atomic batch, so either the whole ballot
+// lands or none of it does.
+export async function castVotes(ids, division, voter = {}) {
+  const picks = ids.slice(0, MAX_PICKS);
+  const name = String(voter.name ?? "").trim();
+  const email = String(voter.email ?? "").trim();
+  if (picks.length === 0) throw new Error("No picks selected");
+  if (name.length < 2) throw new Error("A name is required to vote");
+  if (!isValidEmail(email)) throw new Error("A valid email is required to vote");
+
+  const normalized = normalizeEmail(email);
+  const hash = await hashEmail(normalized);
+  const id = `d${division}_${hash}`;
+
   const batch = writeBatch(db);
-  for (const id of ids.slice(0, MAX_PICKS)) {
+  batch.set(doc(VOTED, id), {
+    division,
+    voterHash: hash,
+    createdAt: serverTimestamp(),
+  });
+  batch.set(doc(VOTERS, id), {
+    name,
+    email,
+    normalizedEmail: normalized,
+    division,
+    voterHash: hash,
+    picks,
+    createdAt: serverTimestamp(),
+  });
+  for (const nameId of picks) {
     batch.set(
-      doc(VOTES, `d${division}_${id}`),
+      doc(VOTES, `d${division}_${nameId}`),
       {
         count: increment(1),
         division,
-        nameId: id,
+        nameId,
+        ballot: id,
         updatedAt: serverTimestamp(),
       },
       { merge: true }
     );
   }
   await batch.commit();
+}
+
+// Admin: every ballot cast, newest first (rules probes excluded).
+export async function getVoters() {
+  const snap = await getDocs(VOTERS);
+  const out = [];
+  snap.forEach((d) => {
+    if (!d.id.includes("_probe-")) out.push({ id: d.id, ...d.data() });
+  });
+  return out.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+}
+
+// Admin: is the one-ballot-per-email gate actually live? The voter-record
+// rules are the same for the admin as for the public, so writing (and
+// removing) a probe ballot proves whether the rules have been published.
+// Without them every ballot is rejected, so this is checked on page load.
+export async function checkVoterGate() {
+  const hash = `probe-${Math.random().toString(36).slice(2, 10)}`;
+  const id = `d1_${hash}`;
+  try {
+    // One batch, exactly like a real ballot: the rules require the marker
+    // and the voter record to land together.
+    const batch = writeBatch(db);
+    batch.set(doc(VOTED, id), {
+      division: 1,
+      voterHash: hash,
+      createdAt: serverTimestamp(),
+    });
+    batch.set(doc(VOTERS, id), {
+      name: "Rules probe",
+      email: "probe@example.com",
+      division: 1,
+      voterHash: hash,
+      picks: [],
+      createdAt: serverTimestamp(),
+    });
+    await batch.commit();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, code: err?.code ?? "unknown" };
+  } finally {
+    await Promise.all([
+      deleteDoc(doc(VOTED, id)).catch(() => {}),
+      deleteDoc(doc(VOTERS, id)).catch(() => {}),
+    ]);
+  }
 }
 
 // Admin: create/update a candidate's display name, bio, and photo.
@@ -424,6 +562,27 @@ export function hasVoted(division) {
 
 export function markVoted(division, ids) {
   localStorage.setItem(votedKey(division), JSON.stringify(ids));
+}
+
+// Remember the voter's name/email on this device so someone voting in a
+// second division doesn't have to type them again.
+const VOTER_KEY = "voter:final-vote";
+
+export function savedVoter() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(VOTER_KEY) ?? "null");
+    return parsed && typeof parsed === "object" ? parsed : { name: "", email: "" };
+  } catch {
+    return { name: "", email: "" };
+  }
+}
+
+export function saveVoter({ name, email }) {
+  try {
+    localStorage.setItem(VOTER_KEY, JSON.stringify({ name, email }));
+  } catch {
+    // private mode — not remembering is fine
+  }
 }
 
 // The ids this browser voted for (handles the older single-pick format).

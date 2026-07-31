@@ -497,7 +497,8 @@
         max-width: 42rem;
         margin: 0 auto;
       }
-      .bio-page .back-btn {
+      .bio-page .back-btn,
+      .voter-page .back-btn {
         font-family: var(--font);
         font-weight: 600;
         text-transform: uppercase;
@@ -554,6 +555,91 @@
         white-space: pre-wrap;
         overflow-wrap: break-word;
       }
+      /* Confirm step — name + email before the ballot counts */
+      .voter-page {
+        max-width: 30rem;
+        margin: 0 auto;
+      }
+      .voter-page h3 {
+        margin: 0.2rem 0 0.3rem;
+        font-size: 1.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .voter-page .note {
+        font-family: var(--font-serif);
+        font-size: 0.92rem;
+        line-height: 1.5;
+        color: var(--text-3);
+        margin: 0 0 1rem;
+      }
+      .voter-page ol {
+        list-style: none;
+        counter-reset: pick;
+        margin: 0 0 1.1rem;
+        padding: 0;
+        display: grid;
+        gap: 0.35rem;
+      }
+      .voter-page ol li {
+        counter-increment: pick;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--surface);
+        border-radius: var(--r-sm);
+        padding: 0.5rem 0.7rem;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+      }
+      .voter-page ol li::before {
+        content: counter(pick);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 700;
+        width: 1.5rem;
+        height: 1.5rem;
+        flex: none;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: #fff;
+      }
+      .voter-page label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text-3);
+        margin: 0 0 0.3rem;
+      }
+      .voter-page input {
+        width: 100%;
+        font-family: var(--font);
+        font-size: 1.05rem;
+        color: var(--text);
+        background: var(--surface-2);
+        border: 2px solid transparent;
+        border-radius: var(--r-sm);
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 0.9rem;
+      }
+      .voter-page input:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: var(--surface-3);
+      }
+      .voter-page .err {
+        color: var(--accent-3);
+        font-size: 0.9rem;
+        margin: 0 0 0.8rem;
+      }
+      .voter-page .submit-btn {
+        width: 100%;
+        margin-bottom: 0.6rem;
+      }
       .foot {
         margin-top: 1rem;
         font-size: 0.6rem;
@@ -587,6 +673,32 @@
       <p id="status">Loading…</p>
       <ul id="list"></ul>
       <div class="bio-page hidden" id="bio-page"></div>
+      <div class="voter-page hidden" id="voter-page">
+        <button class="back-btn" id="voter-back">← Back to my picks</button>
+        <h3>Confirm your ballot</h3>
+        <p class="note">
+          One ballot per person. Your name and email are only used to make
+          sure everyone votes once — they are never shown with the results.
+        </p>
+        <ol id="picks-list"></ol>
+        <label for="voter-name">Your name</label>
+        <input
+          id="voter-name"
+          type="text"
+          autocomplete="name"
+          placeholder="First and last name"
+        />
+        <label for="voter-email">Your email</label>
+        <input
+          id="voter-email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        />
+        <p class="err hidden" id="voter-error"></p>
+        <button class="submit-btn" id="voter-submit">Cast my votes</button>
+      </div>
       <div class="submit-bar hidden" id="submit-bar">
         <button class="submit-btn" id="submit-btn" disabled>Submit votes</button>
       </div>

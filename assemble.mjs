@@ -13,8 +13,8 @@ const pill = (href, label, primary = false) =>
       : "rgba(18,18,24,.88)"
   };box-shadow:0 4px 14px rgba(0,0,0,.45)">${label}</a>`;
 
-const nav = (links, side = "right") =>
-  `\n<div style="position:fixed;bottom:14px;${side}:14px;z-index:99999;display:flex;gap:8px;flex-wrap:wrap">${links.join(
+const nav = (links, side = "right", edge = "bottom") =>
+  `\n<div style="position:fixed;${edge}:14px;${side}:14px;z-index:99999;display:flex;gap:8px;flex-wrap:wrap">${links.join(
     ""
   )}</div>\n`;
 
@@ -30,7 +30,9 @@ function inject(file, html) {
 
 // Public pages: nomination home gets a Vote button; vote page links home.
 inject("dist/index.html", nav([pill("/vote", "Vote Now", true)]));
-inject("dist/vote.html", nav([pill("/", "Nominate")], "left"));
+// Top-left on the vote page: the bottom corners belong to the sticky submit
+// button and must stay clear on a phone.
+inject("dist/vote.html", nav([pill("/", "Nominate")], "left", "top"));
 
 // Admin-side pages: full quick-nav between all consoles.
 inject(
