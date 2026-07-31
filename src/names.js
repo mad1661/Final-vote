@@ -143,14 +143,17 @@ export async function mergeCandidates(primary, duplicates, votes) {
 // tallies in every division, and any nomination docs for the same person.
 export async function removeName(id, nominationDocIds = []) {
   await deleteDoc(doc(NAMES, id));
-  const batch = writeBatch(db);
-  for (const division of DIVISIONS) {
-    batch.delete(doc(VOTES, `d${division}_${id}`));
+  const targets = [
+    ...DIVISIONS.map((division) => doc(VOTES, `d${division}_${id}`)),
+    ...nominationDocIds.map((docId) => doc(NOMINATIONS, docId)),
+  ];
+  // Chunked: a heavily nominated candidate can carry more deletes than the
+  // 500-write batch limit allows.
+  for (let i = 0; i < targets.length; i += 450) {
+    const batch = writeBatch(db);
+    for (const ref of targets.slice(i, i + 450)) batch.delete(ref);
+    await batch.commit();
   }
-  for (const docId of nominationDocIds) {
-    batch.delete(doc(NOMINATIONS, docId));
-  }
-  await batch.commit();
 }
 
 export function isValidEmail(email) {
@@ -264,6 +267,22 @@ export async function getVoters() {
     if (!d.id.includes("_probe-")) out.push({ id: d.id, ...d.data() });
   });
   return out.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+}
+
+// Is the signed-in account actually allowed to write? Every admin action
+// goes through the rules' isAdmin() check, so an address that isn't listed
+// there can sign in and see everything but change nothing. Probing a doc
+// nothing displays gives a straight answer before anything is attempted.
+export async function checkAdminAccess() {
+  const ref = doc(db, "config", "adminProbe");
+  try {
+    await setDoc(ref, { at: serverTimestamp() }, { merge: true });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, code: err?.code ?? "unknown" };
+  } finally {
+    await deleteDoc(ref).catch(() => {});
+  }
 }
 
 // Admin: is the one-ballot-per-email gate actually live? The voter-record

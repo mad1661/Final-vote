@@ -19,6 +19,7 @@ import {
   DIVISIONS,
   addNames,
   addNominations,
+  checkAdminAccess,
   checkVoterGate,
   clearCollection,
   divisionCount,
@@ -335,7 +336,7 @@ function renderDupes() {
             await mergeCandidates(entry, others, board.votes);
           } catch (err) {
             console.error("Merge failed:", err);
-            alert("Merge failed — check your admin access and try again.");
+            alert(accessMessage(err, "The merge"));
           }
         });
         const notDupe = document.createElement("button");
@@ -482,7 +483,7 @@ function renderNames() {
           await removeName(entry.id, entry.nominationDocIds);
         } catch (err) {
           console.error("Remove failed:", err);
-          alert("Could not remove that name — check your access and try again.");
+          alert(accessMessage(err, `Removing "${entry.name}"`));
         }
       });
       actionTd.append(edit, del);
@@ -519,7 +520,7 @@ document.getElementById("merge-btn").addEventListener("click", async () => {
     mergeBar.classList.add("hidden");
   } catch (err) {
     console.error("Merge failed:", err);
-    alert("Merge failed — check your admin access and try again.");
+    alert(accessMessage(err, "The merge"));
   }
 });
 
@@ -577,7 +578,7 @@ async function renderEditorNoms(entry) {
           row.remove();
         } catch (err) {
           console.error("Move failed:", err);
-          alert("Move failed — check your admin access.");
+          alert(accessMessage(err, "Moving that nomination"));
         }
       });
       row.append(info, input, move);
@@ -668,7 +669,7 @@ document.getElementById("restore-noms").addEventListener("click", async () => {
     freshStatus.textContent = `Done — ${n} nomination${n === 1 ? "" : "s"} restored to the submitted name. Duplicates will reappear in the finder above.`;
   } catch (err) {
     console.error("Restore failed:", err);
-    freshStatus.textContent = "Restore failed — check your admin access.";
+    freshStatus.textContent = accessMessage(err, "Restoring the submitted names");
   }
 });
 
@@ -680,7 +681,7 @@ document.getElementById("clear-names").addEventListener("click", async () => {
     freshStatus.textContent = `Done — ${n} admin name record${n === 1 ? "" : "s"} cleared.`;
   } catch (err) {
     console.error("Clear failed:", err);
-    freshStatus.textContent = "Clear failed — check your admin access.";
+    freshStatus.textContent = accessMessage(err, "Clearing the admin names");
   }
 });
 
@@ -696,7 +697,7 @@ document.getElementById("clear-votes").addEventListener("click", async () => {
     freshStatus.textContent = `Done — ${n} vote tallies deleted and ${voters} voter record${voters === 1 ? "" : "s"} cleared. Everyone starts at zero and can vote again.`;
   } catch (err) {
     console.error("Vote reset failed:", err);
-    freshStatus.textContent = "Vote reset failed — check your admin access.";
+    freshStatus.textContent = accessMessage(err, "Resetting the votes");
   }
 });
 
@@ -784,7 +785,7 @@ document.getElementById("logo-save").addEventListener("click", async () => {
     await applyLogo(url);
   } catch (err) {
     console.error("Logo save failed:", err);
-    logoStatus.textContent = "Save failed — check your admin access.";
+    logoStatus.textContent = accessMessage(err, "Saving the logo");
   }
 });
 
@@ -794,9 +795,52 @@ document.getElementById("logo-clear").addEventListener("click", async () => {
     await applyLogo("");
   } catch (err) {
     console.error("Logo clear failed:", err);
-    logoStatus.textContent = "Clear failed — check your admin access.";
+    logoStatus.textContent = accessMessage(err, "Clearing the logo");
   }
 });
+
+/* ---------- Admin access ---------- */
+
+const RULES_URL =
+  "https://console.firebase.google.com/project/voting-10a21/firestore/rules";
+
+// Every failure below can be "the rules don't list this address", which is
+// invisible otherwise: the console signs you in and shows everything, then
+// silently refuses every write. Always name the account and the reason.
+function accessMessage(err, action) {
+  const who = auth.currentUser?.email ?? "this account";
+  if (err?.code === "permission-denied") {
+    return `${action} was blocked by the Firestore rules — ${who} is not on the admin list. Add that address to isAdmin() in the Firestore rules, then reload this page.`;
+  }
+  return `${action} failed (${err?.code ?? "unknown error"}). Please try again.`;
+}
+
+async function reportAdminAccess() {
+  const banner = document.getElementById("admin-banner");
+  const who = auth.currentUser?.email ?? "";
+  banner.className = "gate checking";
+  banner.textContent = "Checking your admin access…";
+  const result = await checkAdminAccess();
+  if (result.ok) {
+    banner.className = "gate ok";
+    banner.textContent = `Admin access confirmed for ${who} — you can edit, merge, remove and upload.`;
+    return;
+  }
+  banner.className = "gate bad";
+  banner.replaceChildren();
+  const b = document.createElement("b");
+  b.textContent = `${who} is signed in but is not on the admin list. `;
+  const rest = document.createElement("span");
+  rest.textContent =
+    `Everything is visible, but saving, removing, merging and uploads will all be refused (${result.code}). ` +
+    "Add this address to isAdmin() in the Firestore rules, then reload.";
+  const link = document.createElement("a");
+  link.href = RULES_URL;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.textContent = "Open Firestore rules →";
+  banner.append(b, rest, link);
+}
 
 /* ---------- Voter gate health ---------- */
 
@@ -823,7 +867,7 @@ async function reportVoterGate() {
     `Nobody can submit a ballot until the rules that allow voter records are published (${result.code}). ` +
     "Open the Firestore rules page and paste the block from the project README, then reload this page.";
   const link = document.createElement("a");
-  link.href = "https://console.firebase.google.com/project/voting-10a21/firestore/rules";
+  link.href = RULES_URL;
   link.target = "_blank";
   link.rel = "noreferrer";
   link.textContent = "Open Firestore rules →";
@@ -1145,6 +1189,7 @@ onAuthStateChanged(auth, (user) => {
     adminUi.classList.remove("hidden");
     renderHead();
     renderSnippets();
+    reportAdminAccess();
     reportVoterGate();
     refreshLogos();
     stopWatching?.();

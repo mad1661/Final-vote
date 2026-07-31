@@ -56,9 +56,17 @@ stops the same browser from re-opening the ballot in a division.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Every admin address goes in this list. Anyone not listed can still
+    // sign in and look around, but every save, merge, removal and upload is
+    // refused — the vote admin page says so on load rather than failing
+    // later with a vague error.
     function isAdmin() {
       return request.auth != null
-             && request.auth.token.email in ['mad1661@gmail.com', 'mdawson@nhra.com'];
+             && request.auth.token.email in [
+                  'mad1661@gmail.com',
+                  'mdawson@nhra.com'
+                  // , 'another.admin@example.com'
+                ];
     }
     match /names/{nameId} {
       allow read: if true;
@@ -139,6 +147,15 @@ service cloud.firestore {
 
 Visitors can read and cast +1 votes; only the admin can manage names or read
 the voter list.
+
+### Adding another admin
+
+Add the address to the `isAdmin()` list above and publish the rules again —
+that list is the only thing that grants access, and Firebase Authentication
+being able to sign someone in does not. Signing in with an unlisted address
+looks like it worked (the console loads and shows everything) but every
+write is refused, which is why the page probes its own access on load and
+names the account in the banner and in every error.
 
 ## Header logo
 
