@@ -106,17 +106,6 @@
         box-shadow: inset 3px 0 0 var(--accent), 0 0 20px var(--accent-glow);
         background: var(--surface-2);
       }
-      .fill {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-          90deg,
-          rgba(220, 38, 38, 0.18),
-          rgba(220, 38, 38, 0.04)
-        );
-        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
-        pointer-events: none;
-      }
       .name {
         position: relative;
         flex: 1;
@@ -126,13 +115,6 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-      }
-      .count {
-        position: relative;
-        font-family: var(--font-mono);
-        font-size: 0.78rem;
-        color: var(--text-3);
-        white-space: nowrap;
       }
       .vote-btn {
         position: relative;
@@ -183,7 +165,7 @@
       </div>
       <p id="status">Loading…</p>
       <ul id="list"></ul>
-      <div class="foot" id="foot">Live results · One vote per person</div>
+      <div class="foot" id="foot">One vote per person</div>
     </div>
     <script type="module" src="/src/embed.js"></script>
   </body>

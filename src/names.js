@@ -103,8 +103,26 @@ export async function voteFor(id, division) {
   );
 }
 
+// Calls `callback` with [{ id, name }] (alphabetical) on every change to
+// the names collection. Public pages use this instead of watchBoard so
+// vote tallies are never streamed to visitors' browsers — only the
+// signed-in admin console reads the votes collection.
+export function watchNames(callback) {
+  return onSnapshot(NAMES, (snapshot) => {
+    const list = [];
+    snapshot.forEach((docSnap) => {
+      list.push({
+        id: docSnap.id,
+        name: displayName(docSnap.id, docSnap.data()),
+      });
+    });
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    callback(list);
+  });
+}
+
 // Calls `callback` with { names, votes } on every change to either
-// collection:
+// collection (admin console only — vote reads require admin auth):
 //   names: [{ id, name }] sorted alphabetically
 //   votes: Map of nameId -> { [division]: count }
 export function watchBoard(callback) {
