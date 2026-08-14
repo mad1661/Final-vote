@@ -106,6 +106,16 @@
         box-shadow: inset 3px 0 0 var(--accent), 0 0 20px var(--accent-glow);
         background: var(--surface-2);
       }
+      .fill {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(220, 38, 38, 0.14),
+          rgba(220, 38, 38, 0.02)
+        );
+        pointer-events: none;
+      }
       .name {
         position: relative;
         flex: 1;

@@ -49,7 +49,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v4";
+const VERSION = "v5";
 const detected = detectDivision();
 const division = detected.division;
 
@@ -78,6 +78,11 @@ function render() {
         const li = document.createElement("li");
         li.className = "row" + (chosen ? " chosen" : "");
 
+        // Decorative accent bar — same look for every row; conveys no
+        // vote information (tallies are admin-only).
+        const fill = document.createElement("div");
+        fill.className = "fill";
+
         const name = document.createElement("span");
         name.className = "name";
         name.textContent = entry.name;
@@ -88,7 +93,7 @@ function render() {
         button.disabled = voted;
         button.addEventListener("click", () => vote(entry.id));
 
-        li.append(name, button);
+        li.append(fill, name, button);
         return li;
       })
     );
