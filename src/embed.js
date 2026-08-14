@@ -5,8 +5,7 @@ import {
   MAX_PICKS,
   alreadyVoted,
   castVotes,
-  divisionCount,
-  fetchBoardOnce,
+  fetchBallotOnce,
   hasVoted,
   isValidEmail,
   loadDivisionAssets,
@@ -14,7 +13,7 @@ import {
   saveVoter,
   savedVoter,
   votedFor,
-  watchBoard,
+  watchBallot,
 } from "./names.js";
 
 const params = new URLSearchParams(location.search);
@@ -64,7 +63,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v13";
+const VERSION = "v14";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -164,7 +163,7 @@ const voterEmail = document.getElementById("voter-email");
 const voterError = document.getElementById("voter-error");
 const voterSubmit = document.getElementById("voter-submit");
 const voterBack = document.getElementById("voter-back");
-foot.textContent = `Live results · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
+foot.textContent = `One ballot per person · ${VERSION} · ${DEMO ? "demo" : detected.source}`;
 
 let board = { byDivision: {}, votes: new Map() };
 let picks = new Set();
@@ -229,13 +228,13 @@ function initials(name) {
 
 function demoBoard() {
   const legends = [
-    ["Don Garlits", "Driver — Top Fuel pioneer, 144 national event wins.", 214],
-    ["Shirley Muldowney", "First woman licensed in Top Fuel; three-time champion.", 198],
-    ["John Force", "16-time Funny Car world champion.", 171],
-    ["Bob Glidden", "Pro Stock's winningest driver of his era.", 96],
-    ["Kenny Bernstein", "First to break 300 mph.", 61],
-    ["Warren Johnson", "The Professor of Pro Stock.", 44],
-    ["Joe Amato", "Five-time Top Fuel champion.", 23],
+    ["Don Garlits", "Driver — Top Fuel pioneer, 144 national event wins."],
+    ["Shirley Muldowney", "First woman licensed in Top Fuel; three-time champion."],
+    ["John Force", "16-time Funny Car world champion."],
+    ["Bob Glidden", "Pro Stock's winningest driver of his era."],
+    ["Kenny Bernstein", "First to break 300 mph."],
+    ["Warren Johnson", "The Professor of Pro Stock."],
+    ["Joe Amato", "Five-time Top Fuel champion."],
   ];
   const names = legends.map(([name, bio], i) => ({
     id: `demo-${i}`,
@@ -244,11 +243,7 @@ function demoBoard() {
     photoUrl: "",
     category: "Driver",
   }));
-  const byDivision = { [division]: names };
-  const votes = new Map(
-    legends.map(([, , count], i) => [`demo-${i}`, { [division]: count }])
-  );
-  return { byDivision, votes };
+  return { byDivision: { [division]: names }, votes: new Map() };
 }
 
 const bioPage = document.getElementById("bio-page");
@@ -470,14 +465,11 @@ function render() {
   const mine = new Set(DEMO && submitted ? picks : votedFor(division));
   if (submitted) picks.forEach((p) => mine.add(p));
 
-  let rows = (board.byDivision[division] ?? []).map((entry) => ({
-    ...entry,
-    count: divisionCount(board.votes, entry.id, division),
-  }));
-  rows = voted
-    ? rows.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-    : rows.sort((a, b) => a.name.localeCompare(b.name));
-  const total = rows.reduce((sum, r) => sum + r.count, 0);
+  // Always alphabetical: tallies are admin-only, so the ballot never
+  // reorders by count and never shows one, before or after voting.
+  const rows = (board.byDivision[division] ?? [])
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
   renderPhotoStrip(rows);
 
   if (rows.length === 0) {
@@ -487,32 +479,11 @@ function render() {
     listEl.replaceChildren(li);
   } else {
     listEl.replaceChildren(
-      ...rows.map((entry, i) => {
-        const rank = i + 1;
-        const pct = total > 0 ? Math.round((entry.count / total) * 100) : 0;
+      ...rows.map((entry) => {
         const isMine = voted ? mine.has(entry.id) : picks.has(entry.id);
 
         const li = document.createElement("li");
-        li.className =
-          "row" +
-          (isMine ? " picked" : "") +
-          (voted && rank <= 3 ? ` r${rank}` : "");
-
-        const fill = document.createElement("div");
-        fill.className = "fill";
-        if (voted) {
-          requestAnimationFrame(() => {
-            fill.style.width = `${pct}%`;
-          });
-        }
-        li.append(fill);
-
-        if (voted) {
-          const medal = document.createElement("span");
-          medal.className = "rank-medal";
-          medal.textContent = String(rank);
-          li.append(medal);
-        }
+        li.className = "row" + (isMine ? " picked" : "");
 
         const avatar = document.createElement("span");
         avatar.className = "avatar";
@@ -576,20 +547,11 @@ function render() {
         info.append(meta);
         li.append(info);
 
-        if (voted) {
-          const count = document.createElement("span");
-          count.className = "count";
-          const b = document.createElement("b");
-          b.textContent = String(entry.count);
-          count.append(b, `${pct}%`);
-          li.append(count);
-        } else {
-          const box = document.createElement("span");
-          box.className = "pick-box";
-          box.textContent = "✓";
-          li.append(box);
-          li.addEventListener("click", () => togglePick(entry.id));
-        }
+        const box = document.createElement("span");
+        box.className = "pick-box";
+        box.textContent = "✓";
+        li.append(box);
+        if (!voted) li.addEventListener("click", () => togglePick(entry.id));
 
         return li;
       })
@@ -602,7 +564,10 @@ function render() {
     status.innerHTML = "";
     const b = document.createElement("b");
     b.textContent = "Thanks for voting!";
-    status.append(b, ` ${total} vote${total === 1 ? "" : "s"} cast — live results below.`);
+    status.append(
+      b,
+      ` Your ${DIVISION_NAMES[division] ?? `Division ${division}`} ballot has been recorded. Results are announced after voting closes.`
+    );
   } else {
     submitBar.classList.remove("hidden");
     pickBanner.classList.remove("hidden");
@@ -705,7 +670,7 @@ if (!DIVISIONS.includes(division)) {
   } else if (app) {
     render();
     let gotData = false;
-    watchBoard(
+    watchBallot(
       (next) => {
         gotData = true;
         board = next;
@@ -723,7 +688,7 @@ if (!DIVISIONS.includes(division)) {
     setTimeout(async () => {
       if (gotData) return;
       try {
-        const once = await fetchBoardOnce();
+        const once = await fetchBallotOnce();
         if (gotData) return;
         board = once;
         render();

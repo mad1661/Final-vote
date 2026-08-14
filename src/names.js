@@ -573,28 +573,37 @@ function buildBoard({ adminNames, nominated, nominationDocs, votes }) {
   return { byDivision, votes };
 }
 
-// One-shot read of the whole board. Live listeners hold a streaming
-// connection open, which some mobile browsers refuse inside a cross-site
-// iframe — the listener then never fires and never errors, leaving the
-// ballot on "Loading…". A plain fetch uses ordinary requests and gets
-// through, so the widget falls back to this.
-export async function fetchBoardOnce() {
-  const [namesSnap, nomsSnap, votesSnap] = await Promise.all([
+// One-shot read of the ballot. Live listeners hold a streaming connection
+// open, which some mobile browsers refuse inside a cross-site iframe — the
+// listener then never fires and never errors, leaving the ballot on
+// "Loading…". A plain fetch uses ordinary requests and gets through, so
+// the widget falls back to this. Like watchBallot, it never reads votes.
+export async function fetchBallotOnce() {
+  const [namesSnap, nomsSnap] = await Promise.all([
     getDocs(NAMES),
     getDocs(NOMINATIONS),
-    getDocs(VOTES),
   ]);
   return buildBoard({
     adminNames: parseNames(namesSnap),
     ...parseNominations(nomsSnap),
-    votes: parseVotes(votesSnap),
+    votes: new Map(),
   });
 }
 
-// Calls `callback` with { byDivision, votes } on every change:
+// Public pages call this instead of watchBoard: it subscribes to the
+// candidates only, so a visitor's browser never fetches the votes
+// collection. Tallies are admin-only — the rules refuse the read anyway.
+// The shape matches watchBoard's, with an always-empty votes map.
+export function watchBallot(callback, onError) {
+  return watchBoard(callback, onError, { withVotes: false });
+}
+
+// Calls `callback` with { byDivision, votes } on every change (the admin
+// console is the only caller that asks for votes — reading them requires
+// admin auth):
 //   byDivision: { [division]: [{ id, name, nominationDocIds }] } sorted by name
 //   votes: Map of nameId -> { [division]: count }
-export function watchBoard(callback, onError) {
+export function watchBoard(callback, onError, { withVotes = true } = {}) {
   const reportError = (where) => (err) => {
     console.error(`watchBoard ${where}:`, err);
     onError?.(where, err);
@@ -618,15 +627,17 @@ export function watchBoard(callback, onError) {
     emit();
   }, reportError("nominations"));
 
-  const stopVotes = onSnapshot(VOTES, (snapshot) => {
-    votes = parseVotes(snapshot);
-    emit();
-  }, reportError("votes"));
+  const stopVotes = withVotes
+    ? onSnapshot(VOTES, (snapshot) => {
+        votes = parseVotes(snapshot);
+        emit();
+      }, reportError("votes"))
+    : null;
 
   return () => {
     stopNames();
     stopNoms();
-    stopVotes();
+    stopVotes?.();
   };
 }
 

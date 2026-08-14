@@ -307,17 +307,6 @@
         box-shadow: inset 0 0 0 3px var(--accent), 0 0 22px var(--accent-glow),
           var(--shadow-card);
       }
-      .fill {
-        position: absolute;
-        left: 0;
-        bottom: 0;
-        height: 6px;
-        width: 0;
-        background: linear-gradient(90deg, var(--accent), var(--accent-2));
-        transition: width 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
-        pointer-events: none;
-        z-index: 3;
-      }
       .avatar {
         position: absolute;
         inset: 0;
@@ -378,24 +367,6 @@
       .meta .bio-link {
         color: var(--accent-3);
       }
-      .count {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
-        z-index: 2;
-        font-family: var(--font-mono);
-        font-size: 0.68rem;
-        color: #fff;
-        background: rgba(0, 0, 0, 0.6);
-        border-radius: 999px;
-        padding: 0.3rem 0.55rem;
-        white-space: nowrap;
-      }
-      .count b {
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-right: 0.25rem;
-      }
       .pick-box {
         position: absolute;
         top: 0.5rem;
@@ -416,25 +387,6 @@
         background: var(--accent);
         color: #fff;
       }
-      .rank-medal {
-        position: absolute;
-        top: 0.5rem;
-        left: 0.5rem;
-        z-index: 2;
-        font-family: var(--font-mono);
-        font-size: 0.76rem;
-        font-weight: 700;
-        width: 1.8rem;
-        height: 1.8rem;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background: rgba(0, 0, 0, 0.6);
-        color: #fff;
-      }
-      .row.r1 .rank-medal { background: var(--gold); color: #211a00; }
-      .row.r2 .rank-medal { background: #c9d1e0; color: #1c2029; }
-      .row.r3 .rank-medal { background: #d08a4e; color: #241300; }
       .empty {
         grid-column: 1 / -1;
         color: var(--text-3);
@@ -781,7 +733,7 @@
       <div class="submit-bar hidden" id="submit-bar">
         <button class="submit-btn" id="submit-btn" disabled>Submit votes</button>
       </div>
-      <div class="foot" id="foot">Live results</div>
+      <div class="foot" id="foot">One ballot per person</div>
     </div>
     <div class="overlay hidden" id="overlay"></div>
     <script type="module" src="/src/embed.js"></script>
