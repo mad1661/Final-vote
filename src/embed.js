@@ -63,7 +63,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v15";
+const VERSION = "v16";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 
@@ -486,16 +486,11 @@ function render() {
         li.className = "row" + (isMine ? " picked" : "");
 
         // Decoration only, identical on every tile: an accent bar along the
-        // bottom edge and the row's place in the alphabetical list. Neither
-        // conveys standings — tallies are admin-only.
+        // bottom edge. No numbers of any kind appear on tiles — tallies are
+        // admin-only.
         const fill = document.createElement("div");
         fill.className = "fill";
         li.append(fill);
-
-        const num = document.createElement("span");
-        num.className = "list-num";
-        num.textContent = String(i + 1);
-        li.append(num);
 
         const avatar = document.createElement("span");
         avatar.className = "avatar";
