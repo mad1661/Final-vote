@@ -67,6 +67,15 @@ function renderBoard() {
         const li = document.createElement("li");
         li.className = "row" + (chosen ? " chosen" : "");
 
+        // Decorative accent bar — same look for every row; conveys no
+        // vote information (tallies are admin-only).
+        const fill = document.createElement("div");
+        fill.className = "fill";
+
+        const rankEl = document.createElement("span");
+        rankEl.className = "rank";
+        rankEl.textContent = String(names.indexOf(entry) + 1);
+
         const name = document.createElement("span");
         name.className = "name";
         name.textContent = entry.name;
@@ -77,7 +86,7 @@ function renderBoard() {
         button.disabled = voted;
         button.addEventListener("click", () => vote(entry.id));
 
-        li.append(name, button);
+        li.append(fill, rankEl, name, button);
         return li;
       })
     );
