@@ -9,6 +9,9 @@ widget.
 
 - `/` — division picker; `/?div=3` — full-page vote for Division 3
 - `/embed.html?div=3` — compact widget for embedding in division sites
+
+Public pages show only the candidate list (alphabetical) — vote counts,
+percentages, and rankings are visible only in the admin console.
 - `/admin.html` — admin console (Google sign-in): bulk add names by pasting
   or uploading Excel/CSV, live results table across all divisions, remove
   names, and copy-paste embed codes for each division
@@ -54,7 +57,9 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /votes/{voteId} {
-      allow read: if true;
+      // Tallies are admin-only: visitors can cast votes but never read
+      // the counts, in the UI or via direct Firestore queries.
+      allow read: if isAdmin();
       allow create: if request.resource.data.count == 1
                     && request.resource.data.division is int
                     && request.resource.data.division >= 1
@@ -68,7 +73,11 @@ service cloud.firestore {
 }
 ```
 
-Visitors can read and cast +1 votes; only the admin can manage names.
+Visitors can cast +1 votes but cannot read the tallies; only the admin can
+see results and manage names. If you previously pasted an older version of
+these rules (with `allow read: if true` on votes), re-paste this block —
+the public pages no longer show or fetch vote counts, but the rules are
+what actually stop someone from querying the numbers directly.
 
 ## Embedding in division sites
 

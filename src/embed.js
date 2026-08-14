@@ -1,12 +1,11 @@
 import { app } from "./firebase.js";
 import {
   DIVISIONS,
-  divisionCount,
   hasVoted,
   markVoted,
   voteFor,
   votedFor,
-  watchBoard,
+  watchNames,
 } from "./names.js";
 
 // Division resolution. The embedding site's domain is the source of truth
@@ -50,7 +49,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v3";
+const VERSION = "v4";
 const detected = detectDivision();
 const division = detected.division;
 
@@ -58,46 +57,30 @@ const status = document.getElementById("status");
 const listEl = document.getElementById("list");
 const divTag = document.getElementById("div-tag");
 const foot = document.getElementById("foot");
-foot.textContent = `Live results · One vote per person · ${VERSION} · ${detected.source}`;
+foot.textContent = `One vote per person · ${VERSION} · ${detected.source}`;
 
-let board = { names: [], votes: new Map() };
+let names = [];
 
 function render() {
   const voted = hasVoted(division);
   const choice = votedFor(division);
-  const rows = board.names
-    .map((entry) => ({
-      ...entry,
-      count: divisionCount(board.votes, entry.id, division),
-    }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  const total = rows.reduce((sum, r) => sum + r.count, 0);
 
-  if (rows.length === 0) {
+  if (names.length === 0) {
     const li = document.createElement("li");
     li.className = "empty";
     li.textContent = "No candidates yet — check back soon.";
     listEl.replaceChildren(li);
   } else {
     listEl.replaceChildren(
-      ...rows.map((entry) => {
-        const pct = total > 0 ? Math.round((entry.count / total) * 100) : 0;
+      ...names.map((entry) => {
         const chosen = entry.id === choice;
 
         const li = document.createElement("li");
         li.className = "row" + (chosen ? " chosen" : "");
 
-        const fill = document.createElement("div");
-        fill.className = "fill";
-        fill.style.width = `${pct}%`;
-
         const name = document.createElement("span");
         name.className = "name";
         name.textContent = entry.name;
-
-        const count = document.createElement("span");
-        count.className = "count";
-        count.textContent = voted ? `${entry.count} · ${pct}%` : "";
 
         const button = document.createElement("button");
         button.className = "vote-btn";
@@ -105,14 +88,14 @@ function render() {
         button.disabled = voted;
         button.addEventListener("click", () => vote(entry.id));
 
-        li.append(fill, name, count, button);
+        li.append(name, button);
         return li;
       })
     );
   }
 
   if (voted) {
-    status.textContent = `Thanks for voting! ${total} vote${total === 1 ? "" : "s"} cast in Division ${division}.`;
+    status.textContent = `Thanks for voting! Your Division ${division} vote has been recorded.`;
   } else {
     status.textContent = "Cast your vote — one pick per person.";
   }
@@ -158,8 +141,8 @@ if (!DIVISIONS.includes(division)) {
   divTag.textContent = `Division ${division}`;
   document.title = `Legend Vote — Division ${division}`;
   render();
-  watchBoard((next) => {
-    board = next;
+  watchNames((next) => {
+    names = next;
     render();
   });
 } else {

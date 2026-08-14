@@ -197,29 +197,6 @@
         box-shadow: inset 3px 0 0 var(--accent), 0 0 24px var(--accent-glow);
         background: var(--surface-2);
       }
-      .fill {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-          90deg,
-          rgba(220, 38, 38, 0.18),
-          rgba(220, 38, 38, 0.03)
-        );
-        transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
-        pointer-events: none;
-      }
-      .rank {
-        position: relative;
-        font-family: var(--font-mono);
-        font-size: 0.78rem;
-        color: var(--text-4);
-        width: 1.6rem;
-        text-align: right;
-        flex-shrink: 0;
-      }
-      .row.r1 .rank { color: #f5c542; }
-      .row.r2 .rank { color: #c0c8d8; }
-      .row.r3 .rank { color: #d08a4e; }
       .name {
         position: relative;
         flex: 1;
@@ -228,13 +205,6 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-      }
-      .count {
-        position: relative;
-        font-family: var(--font-mono);
-        font-size: 0.8rem;
-        color: var(--text-3);
-        white-space: nowrap;
       }
       .vote-btn {
         position: relative;
@@ -282,7 +252,7 @@
   <body>
     <div class="wrap">
       <header>
-        <span class="pill"><i></i>Live · One vote per person</span>
+        <span class="pill"><i></i>One vote per person</span>
         <h1>Legend <em>Vote</em></h1>
         <p class="subtitle" id="subtitle">Select your division to cast your vote.</p>
       </header>
