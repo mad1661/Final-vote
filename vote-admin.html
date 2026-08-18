@@ -674,6 +674,17 @@
           <textarea id="editor-bio" placeholder="Career highlights, championships, legacy…"></textarea>
         </div>
         <div class="field">
+          <label for="editor-category">Category</label>
+          <input
+            id="editor-category"
+            type="text"
+            maxlength="60"
+            list="category-options"
+            placeholder="Racer, Crew Chief, Official…"
+          />
+          <datalist id="category-options"></datalist>
+        </div>
+        <div class="field">
           <label for="editor-photo-url">Photo URL</label>
           <input id="editor-photo-url" type="url" placeholder="https://…" />
         </div>

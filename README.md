@@ -28,7 +28,11 @@ npm run dev
 - `names/{slug}` — one doc per candidate, shared by all divisions. The
   reader tolerates any doc shape (`name`/`value`/`text`/`title` field or the
   doc id itself). Bulk adds are chunked batches; slug keying merges
-  duplicates.
+  duplicates. Its `name`, `bio`, `photoUrl` and `category` fields are the
+  admin's overrides: whatever is set here wins over what the nomination form
+  carried, so a nominee submitted with the wrong category (or none) can be
+  corrected in the vote admin's per-candidate editor without touching the
+  original submission.
 - `votes/d{division}_{nameId}` — one tally doc per name **per division**:
   `{ count, division, nameId, updatedAt }`. Votes are atomic +1 increments.
   Existing name docs are never modified by voting.

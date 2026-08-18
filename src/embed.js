@@ -63,7 +63,7 @@ function detectDivision() {
   return { division: null, source: "no signal" };
 }
 
-const VERSION = "v15";
+const VERSION = "v16";
 const detected = detectDivision();
 const division = detected.division ?? (DEMO ? 1 : null);
 

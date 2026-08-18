@@ -61,6 +61,7 @@ const editorTitle = document.getElementById("editor-title");
 const editorPreview = document.getElementById("editor-preview");
 const editorName = document.getElementById("editor-name");
 const editorBio = document.getElementById("editor-bio");
+const editorCategory = document.getElementById("editor-category");
 const editorPhotoUrl = document.getElementById("editor-photo-url");
 const editorPhotoFile = document.getElementById("editor-photo-file");
 const editorStatus = document.getElementById("editor-status");
@@ -587,13 +588,35 @@ async function renderEditorNoms(entry) {
   );
 }
 
+// Suggestions for the category box: every category already in use, so the
+// existing spellings are one click away and new ones stay typeable.
+function refreshCategoryOptions() {
+  const seen = new Set();
+  for (const list of Object.values(board.byDivision ?? {})) {
+    for (const entry of list) {
+      const value = (entry.category ?? "").trim();
+      if (value) seen.add(value);
+    }
+  }
+  const options = [...seen].sort((a, b) => a.localeCompare(b));
+  document.getElementById("category-options").replaceChildren(
+    ...options.map((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      return option;
+    })
+  );
+}
+
 function openEditor(entry) {
   editingId = entry.id;
   editorTitle.textContent = `Edit — ${entry.name}`;
   editorName.value = entry.name;
   editorBio.value = entry.bio ?? "";
+  editorCategory.value = entry.category ?? "";
   editorPhotoUrl.value = entry.photoUrl ?? "";
   editorStatus.textContent = "";
+  refreshCategoryOptions();
   updatePreview();
   editorOverlay.classList.remove("hidden");
   renderEditorNoms(entry).catch((err) => {
@@ -646,6 +669,7 @@ document.getElementById("editor-save").addEventListener("click", async () => {
     await saveName(editingId, {
       name: editorName.value.trim() || undefined,
       bio: editorBio.value.trim(),
+      category: editorCategory.value.trim(),
       photoUrl: editorPhotoUrl.value.trim(),
     });
     editorOverlay.classList.add("hidden");

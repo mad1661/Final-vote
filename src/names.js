@@ -321,14 +321,17 @@ export async function checkVoterGate() {
   }
 }
 
-// Admin: create/update a candidate's display name, bio, and photo.
-export async function saveName(id, { name, bio, photoUrl }) {
+// Admin: create/update a candidate's display name, bio, photo and category
+// (Racer, Crew Chief, Official...). A category set here wins over whatever
+// the nomination form carried.
+export async function saveName(id, { name, bio, photoUrl, category }) {
   await setDoc(
     doc(NAMES, id),
     {
       ...(name !== undefined && { name }),
       ...(bio !== undefined && { bio }),
       ...(photoUrl !== undefined && { photoUrl }),
+      ...(category !== undefined && { category }),
       updatedAt: serverTimestamp(),
     },
     { merge: true }
@@ -489,6 +492,7 @@ function parseNames(snapshot) {
       name: displayName(docSnap.id, data),
       bio: typeof data.bio === "string" ? data.bio : "",
       photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
+      category: typeof data.category === "string" ? data.category : "",
       division: typeof data.division === "number" ? data.division : undefined,
     });
   });
@@ -564,7 +568,7 @@ function buildBoard({ adminNames, nominated, nominationDocs, votes }) {
           photoUrl: photos[0] ?? "",
           photos,
           bio: override.bio || info.bio || "",
-          category: info.category || "",
+          category: override.category || info.category || "",
           nominationDocIds: nominationDocs.get(id) ?? [],
         };
       })
