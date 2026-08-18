@@ -1,0 +1,164 @@
+============================================================
+  DIVISION ADMIN DASHBOARD — SETUP GUIDE
+============================================================
+
+The admin.html page lets each Division Director log in
+and see ONLY the nominations for their division.
+
+
+============================================================
+STEP 1: ENABLE FIREBASE AUTHENTICATION
+============================================================
+
+1. Go to Firebase Console:
+   https://console.firebase.google.com/project/voting-10a21
+
+2. Click "Authentication" in the left sidebar
+
+3. Click "Get started"
+
+4. Under "Sign-in method", enable "Email/Password"
+   - Click "Email/Password"
+   - Toggle "Enable" to ON
+   - Click "Save"
+
+
+============================================================
+STEP 2: CREATE ADMIN ACCOUNTS
+============================================================
+
+Create one account per Division Director:
+
+1. In Firebase Console > Authentication > Users tab
+
+2. Click "Add user"
+
+3. Enter each director's email and a password:
+
+   Division 1 (Northeast):     director1@nhradiv1.com
+   Division 2 (Southeast):     director2@nhradiv2.com
+   Division 3 (North Central): director3@nhradiv3.com
+   Division 4 (South Central): director4@nhradiv4.com
+   Division 5 (West Central):  director5@nhradiv5.com
+   Division 6 (Northwest):     director6@nhradiv6.com
+   Division 7 (Pacific):       director7@nhradiv7.com
+
+   TIP: Use real email addresses so they can reset their
+   passwords. The @nhradivN.com format is just an example.
+
+4. If you want a SUPER ADMIN who sees ALL divisions,
+   create one more account and add their email to the
+   ADMIN_DIVISIONS map in admin.html:
+
+   var ADMIN_DIVISIONS = {
+     "superadmin@nhra.com": ["1","2","3","4","5","6","7"],
+   };
+
+
+============================================================
+STEP 3: CONFIGURE DIVISION ACCESS
+============================================================
+
+The dashboard auto-detects divisions from email addresses:
+
+  - Emails containing "nhradiv1" → sees Division 1
+  - Emails containing "nhradiv2" → sees Division 2
+  - etc.
+
+If your directors use different email addresses, edit the
+ADMIN_DIVISIONS map in admin.html to map their emails:
+
+  var ADMIN_DIVISIONS = {
+    "john.smith@gmail.com":    ["1"],
+    "sarah.jones@outlook.com": ["2"],
+    "bob@racingteam.com":      ["3","4"],
+    "admin@nhra.com":          ["1","2","3","4","5","6","7"],
+  };
+
+
+============================================================
+STEP 4: CREATE FIRESTORE INDEX
+============================================================
+
+The dashboard queries nominations by division + date.
+Firebase needs a composite index for this.
+
+1. Open admin.html in Chrome and sign in
+
+2. If you see an error about indexes, open Chrome DevTools
+   (F12 > Console) and click the link Firebase provides
+   to create the index automatically
+
+   OR create it manually:
+
+   - Firebase Console > Firestore > Indexes tab
+   - Click "Add index"
+   - Collection: nominations
+   - Fields:
+     1. division  — Ascending
+     2. submittedAt — Descending
+   - Click "Create"
+
+   The index takes 1-5 minutes to build.
+
+
+============================================================
+STEP 5: SET FIRESTORE SECURITY RULES (recommended)
+============================================================
+
+Go to Firebase Console > Firestore > Rules tab.
+Replace the rules with:
+
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /nominations/{doc} {
+        // Anyone can submit a nomination
+        allow create: if true;
+
+        // Only signed-in users can read
+        allow read: if request.auth != null;
+
+        // No one can update or delete
+        allow update, delete: if false;
+      }
+    }
+  }
+
+This means:
+- Public visitors can submit nominations (no login needed)
+- Only signed-in admin users can read/view them
+- No one can edit or delete nominations
+
+
+============================================================
+HOW IT WORKS
+============================================================
+
+1. A Division Director opens admin.html
+2. They sign in with their email/password
+3. The system determines which division(s) they can access
+4. It queries Firestore for nominations matching those
+   divisions only
+5. They can:
+   - View all nominations for their division
+   - Filter by category (Racer, Crew, Sponsor, etc.)
+   - Search by name
+   - Click any nomination to see full details + photo
+   - Export all their nominations to CSV
+
+
+============================================================
+FEATURES
+============================================================
+
+- Real-time updates (new nominations appear automatically)
+- Category filtering and search
+- Stats bar (total, racers, crew, other counts)
+- Detail modal with full nomination + uploaded photo
+- CSV export for spreadsheets
+- Per-division access control
+- Super admin access (sees all divisions)
+
+
+============================================================

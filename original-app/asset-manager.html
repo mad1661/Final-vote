@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asset Manager — NHRA 75 Legends</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'display': ['Oswald', 'sans-serif'] },
+          colors: { 'nhra-red': '#e30613' }
+        }
+      }
+    }
+  </script>
+  <style>
+    .form-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: white;
+      width: 100%;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    .form-input:focus { outline: none; border-color: #e30613; background: rgba(255,255,255,0.08); }
+    .form-input::placeholder { color: rgba(255,255,255,0.35); }
+    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; }
+    .card:hover { border-color: rgba(255,255,255,0.2); }
+    .div-tab {
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+    }
+    .div-tab:hover { border-color: rgba(255,255,255,0.3); color: white; }
+    .div-tab.active {
+      background: #e30613;
+      border-color: #e30613;
+      color: white;
+    }
+    .asset-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .asset-card:hover { border-color: rgba(255,255,255,0.25); }
+    .asset-preview {
+      background: repeating-clamped-pattern;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      position: relative;
+    }
+    .asset-preview img {
+      max-width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+    }
+    .upload-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      cursor: pointer;
+    }
+    .asset-preview:hover .upload-overlay { opacity: 1; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 100;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #166534; color: #bbf7d0; border: 1px solid #22c55e; }
+    .toast.error { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-black font-display tracking-wider">ASSET MANAGER</h1>
+        <p class="text-zinc-500 mt-2">NHRA 75 Legends — Photos & Logos</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-zinc-400 mb-2 uppercase tracking-wider font-display">Email</label>
+          <input type="email" id="login-email" class="form-input" placeholder="admin@nhra.com" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-zinc-400 mb-2 uppercase tracking-wider font-display">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" id="login-btn"
+                class="w-full bg-nhra-red hover:bg-red-700 text-white text-lg font-bold py-3 px-6 rounded transition-colors font-display tracking-wider mt-2">
+          SIGN IN
+        </button>
+        <p id="login-error" class="hidden text-red-400 text-sm text-center mt-2"></p>
+      </form>
+      <p class="text-zinc-600 text-xs text-center mt-6">Same login as the Division Admin dashboard.</p>
+    </div>
+  </div>
+
+  <!-- ===== ASSET MANAGER DASHBOARD ===== -->
+  <div id="dashboard" class="hidden">
+
+    <header class="bg-black border-b border-zinc-800 sticky top-0 z-50">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-black font-display tracking-wider">ASSET MANAGER</h1>
+          <p class="text-nhra-red text-sm font-display tracking-wider">Photos & Logos per Division</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="admin.html" class="text-zinc-400 hover:text-white text-sm font-display tracking-wider transition-colors">ADMIN</a>
+          <span id="dash-user-email" class="text-zinc-500 text-sm hidden sm:inline"></span>
+          <button id="logout-btn" class="text-zinc-400 hover:text-white text-sm font-display tracking-wider transition-colors">
+            SIGN OUT
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Division Tabs -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <div id="division-tabs" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Asset Grid -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+      <div id="asset-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="loading-state" class="text-center py-20">
+        <div class="text-zinc-500 font-display tracking-wider animate-pulse">LOADING ASSETS...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast"></div>
+
+  <!-- ===== FIREBASE SDK ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <script>
+    firebase.initializeApp({
+      apiKey:            "AIzaSyB9pTTJApbqOAwQ7vwAgK7nMZVWAElpwIc",
+      authDomain:        "voting-10a21.firebaseapp.com",
+      projectId:         "voting-10a21",
+      storageBucket:     "voting-10a21.firebasestorage.app",
+      messagingSenderId: "851898047005",
+      appId:             "1:851898047005:web:0f7e1197ba1b8713c484f4"
+    });
+
+    var auth    = firebase.auth();
+    var db      = firebase.firestore();
+    var storage = firebase.storage();
+
+    var HOSTING_BASE = 'https://voting-10a21.web.app/';
+
+    var DIVISIONS = {
+      "1": { name: "Northeast Division",     short: "D1" },
+      "2": { name: "Southeast Division",     short: "D2" },
+      "3": { name: "North Central Division", short: "D3" },
+      "4": { name: "South Central Division", short: "D4" },
+      "5": { name: "West Central Division",  short: "D5" },
+      "6": { name: "Northwest Division",     short: "D6" },
+      "7": { name: "Pacific Division",       short: "D7" }
+    };
+
+    var ASSET_SLOTS = [
+      { key: "photo1", label: "Hero Photo 1",     defaultFile: "photo-default-1.jpg", description: "Top-left scrapbook photo" },
+      { key: "photo2", label: "Hero Photo 2",     defaultFile: "photo-default-2.jpg", description: "Top-center tall photo" },
+      { key: "photo3", label: "Hero Photo 3",     defaultFile: "photo-default-3.jpg", description: "Top-right scrapbook photo" },
+      { key: "photo4", label: "Hero Photo 4",     defaultFile: "photo-default-4.jpg", description: "Bottom-center wide photo" },
+      { key: "logo75", label: "75th Anniversary Logo", defaultFile: "nhra-75-logo.png", description: "Main 75th logo used in splash, hero, and form" }
+    ];
+
+    var selectedDivision = "default";
+    var currentAssets = {};
+    var defaultAssets = {};
+
+    // =====================================================
+    //  AUTH
+    // =====================================================
+    auth.onAuthStateChanged(function(user) {
+      if (user) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('dash-user-email').textContent = user.email;
+        buildTabs();
+        loadAssets(selectedDivision);
+      } else {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('dashboard').classList.add('hidden');
+      }
+    });
+
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('login-email').value;
+      var pass  = document.getElementById('login-password').value;
+      var btn   = document.getElementById('login-btn');
+      var err   = document.getElementById('login-error');
+
+      btn.disabled = true;
+      btn.textContent = 'SIGNING IN...';
+      err.classList.add('hidden');
+
+      auth.signInWithEmailAndPassword(email, pass)
+        .catch(function(error) {
+          err.textContent = error.code === 'auth/invalid-credential'
+            ? 'Invalid email or password.'
+            : error.message;
+          err.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'SIGN IN';
+        });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', function() {
+      auth.signOut();
+    });
+
+    // =====================================================
+    //  DIVISION TABS
+    // =====================================================
+    function buildTabs() {
+      var container = document.getElementById('division-tabs');
+      container.innerHTML = '';
+
+      var defaultBtn = document.createElement('button');
+      defaultBtn.className = 'div-tab font-display' + (selectedDivision === 'default' ? ' active' : '');
+      defaultBtn.textContent = 'DEFAULT — All Divisions';
+      defaultBtn.style.borderColor = selectedDivision === 'default' ? '' : 'rgba(255,255,255,0.25)';
+      defaultBtn.onclick = function() {
+        selectedDivision = 'default';
+        document.querySelectorAll('.div-tab').forEach(function(t) { t.classList.remove('active'); });
+        defaultBtn.classList.add('active');
+        loadAssets('default');
+      };
+      container.appendChild(defaultBtn);
+
+      Object.keys(DIVISIONS).forEach(function(divNum) {
+        var div = DIVISIONS[divNum];
+        var btn = document.createElement('button');
+        btn.className = 'div-tab font-display' + (divNum === selectedDivision ? ' active' : '');
+        btn.textContent = div.short + ' — ' + div.name;
+        btn.onclick = function() {
+          selectedDivision = divNum;
+          document.querySelectorAll('.div-tab').forEach(function(t) { t.classList.remove('active'); });
+          btn.classList.add('active');
+          loadAssets(divNum);
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    // =====================================================
+    //  LOAD ASSETS FROM FIRESTORE
+    // =====================================================
+    function loadAssets(divNum) {
+      var grid = document.getElementById('asset-grid');
+      var loading = document.getElementById('loading-state');
+      grid.innerHTML = '';
+      loading.classList.remove('hidden');
+
+      if (divNum === 'default') {
+        db.collection('divisionAssets').doc('default').get()
+          .then(function(doc) {
+            currentAssets = doc.exists ? doc.data() : {};
+            defaultAssets = currentAssets;
+            loading.classList.add('hidden');
+            renderAssetGrid(divNum);
+          })
+          .catch(function(err) {
+            console.error('Error loading assets:', err);
+            currentAssets = {};
+            defaultAssets = {};
+            loading.classList.add('hidden');
+            renderAssetGrid(divNum);
+          });
+      } else {
+        Promise.all([
+          db.collection('divisionAssets').doc(divNum).get(),
+          db.collection('divisionAssets').doc('default').get()
+        ]).then(function(results) {
+          currentAssets = results[0].exists ? results[0].data() : {};
+          defaultAssets = results[1].exists ? results[1].data() : {};
+          loading.classList.add('hidden');
+          renderAssetGrid(divNum);
+        }).catch(function(err) {
+          console.error('Error loading assets:', err);
+          currentAssets = {};
+          defaultAssets = {};
+          loading.classList.add('hidden');
+          renderAssetGrid(divNum);
+        });
+      }
+    }
+
+    // =====================================================
+    //  RENDER ASSET CARDS
+    // =====================================================
+    function renderAssetGrid(divNum) {
+      var grid = document.getElementById('asset-grid');
+      grid.innerHTML = '';
+
+      var isDefaultTab = divNum === 'default';
+
+      if (isDefaultTab) {
+        var header = document.createElement('div');
+        header.className = 'col-span-full mb-2';
+        header.innerHTML = '<p class="text-zinc-400 text-sm">These are the <strong class="text-white">base photos and logo</strong> used by all divisions. Upload here to change what every division sees by default.</p>';
+        grid.appendChild(header);
+      } else {
+        var header = document.createElement('div');
+        header.className = 'col-span-full mb-2';
+        header.innerHTML = '<p class="text-zinc-400 text-sm">Override specific images for <strong class="text-white">' + DIVISIONS[divNum].name + '</strong> only. Divisions without overrides use the DEFAULT tab images.</p>';
+        grid.appendChild(header);
+      }
+
+      ASSET_SLOTS.forEach(function(slot) {
+        var customUrl = currentAssets[slot.key] || '';
+        var baseDefaultUrl = (!isDefaultTab && defaultAssets[slot.key]) || '';
+        var hardcodedUrl = HOSTING_BASE + slot.defaultFile;
+
+        var displayUrl, statusLabel, statusClass, showReset;
+
+        if (isDefaultTab) {
+          displayUrl = customUrl || hardcodedUrl;
+          showReset = !!customUrl;
+          if (customUrl) {
+            statusLabel = 'UPLOADED';
+            statusClass = 'text-green-400 bg-green-500/10';
+          } else {
+            statusLabel = 'ORIGINAL';
+            statusClass = 'text-zinc-500 bg-zinc-800';
+          }
+        } else {
+          if (customUrl) {
+            displayUrl = customUrl;
+            statusLabel = 'DIVISION OVERRIDE';
+            statusClass = 'text-green-400 bg-green-500/10';
+            showReset = true;
+          } else if (baseDefaultUrl) {
+            displayUrl = baseDefaultUrl;
+            statusLabel = 'FROM DEFAULT';
+            statusClass = 'text-blue-400 bg-blue-500/10';
+            showReset = false;
+          } else {
+            displayUrl = hardcodedUrl;
+            statusLabel = 'ORIGINAL';
+            statusClass = 'text-zinc-500 bg-zinc-800';
+            showReset = false;
+          }
+        }
+
+        var card = document.createElement('div');
+        card.className = 'asset-card';
+        card.innerHTML =
+          '<div class="asset-preview" id="preview-' + slot.key + '">'
+          + '<img src="' + displayUrl + '" alt="' + slot.label + '" onerror="this.src=\'' + hardcodedUrl + '\'">'
+          + '<div class="upload-overlay" onclick="triggerUpload(\'' + slot.key + '\')">'
+          + '  <div class="text-center">'
+          + '    <svg class="w-8 h-8 mx-auto mb-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'
+          + '    <span class="text-sm font-display tracking-wider">CLICK TO ' + (isDefaultTab ? 'UPLOAD' : 'OVERRIDE') + '</span>'
+          + '  </div>'
+          + '</div>'
+          + '</div>'
+          + '<div class="p-4">'
+          + '  <div class="flex items-start justify-between gap-3">'
+          + '    <div>'
+          + '      <h3 class="font-bold font-display tracking-wider text-sm">' + slot.label + '</h3>'
+          + '      <p class="text-zinc-500 text-xs mt-1">' + slot.description + '</p>'
+          + '    </div>'
+          + '    <div class="flex items-center gap-1 shrink-0">'
+          + '      <span class="text-xs font-display tracking-wider ' + statusClass + ' px-2 py-0.5 rounded">' + statusLabel + '</span>'
+          + '    </div>'
+          + '  </div>'
+          + (showReset
+            ? '<button onclick="resetAsset(\'' + slot.key + '\')" class="text-xs text-zinc-400 hover:text-nhra-red mt-3 font-display tracking-wider transition-colors">' + (isDefaultTab ? 'RESET TO ORIGINAL' : 'REMOVE OVERRIDE') + '</button>'
+            : '')
+          + '</div>';
+
+        grid.appendChild(card);
+      });
+    }
+
+    // =====================================================
+    //  IMAGE OPTIMIZATION
+    // =====================================================
+    function optimizeImage(file, maxWidth, quality) {
+      maxWidth = maxWidth || 1920;
+      quality = quality || 0.85;
+      if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
+        return Promise.resolve(file);
+      }
+      return new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() {
+          var w = img.width, h = img.height;
+          if (w <= maxWidth && file.size < 500 * 1024) {
+            URL.revokeObjectURL(img.src);
+            resolve(file);
+            return;
+          }
+          if (w > maxWidth) {
+            h = Math.round(h * (maxWidth / w));
+            w = maxWidth;
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(function(blob) {
+            URL.revokeObjectURL(img.src);
+            resolve(blob && blob.size < file.size ? blob : file);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = function() {
+          URL.revokeObjectURL(img.src);
+          resolve(file);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    // =====================================================
+    //  UPLOAD
+    // =====================================================
+    function triggerUpload(slotKey) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = function() {
+        if (input.files.length) uploadAsset(slotKey, input.files[0]);
+      };
+      input.click();
+    }
+
+    async function uploadAsset(slotKey, file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file.', 'error');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('File must be under 10 MB.', 'error');
+        return;
+      }
+
+      var previewEl = document.getElementById('preview-' + slotKey);
+      if (previewEl) {
+        var overlay = previewEl.querySelector('.upload-overlay');
+        if (overlay) overlay.innerHTML = '<div class="spinner"></div>';
+      }
+
+      try {
+        var isLogo = slotKey === 'logo75';
+        var optimized = isLogo ? file : await optimizeImage(file, 1920, 0.85);
+        var ext = optimized === file
+          ? file.name.split('.').pop().toLowerCase()
+          : 'jpg';
+        var storagePath = 'division-assets/' + selectedDivision + '/' + slotKey + '.' + ext;
+        var ref = storage.ref(storagePath);
+        var snap = await ref.put(optimized);
+        var downloadUrl = await snap.ref.getDownloadURL();
+
+        var update = {};
+        update[slotKey] = downloadUrl;
+        update['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        update['updatedBy'] = auth.currentUser.email;
+
+        await db.collection('divisionAssets').doc(selectedDivision).set(update, { merge: true });
+
+        currentAssets[slotKey] = downloadUrl;
+        if (selectedDivision === 'default') defaultAssets[slotKey] = downloadUrl;
+        renderAssetGrid(selectedDivision);
+        var label = selectedDivision === 'default' ? 'All Divisions' : DIVISIONS[selectedDivision].short;
+        showToast(getSlotLabel(slotKey) + ' updated for ' + label, 'success');
+
+      } catch (err) {
+        console.error('Upload error:', err);
+        showToast('Upload failed: ' + err.message, 'error');
+        renderAssetGrid(selectedDivision);
+      }
+    }
+
+    // =====================================================
+    //  RESET TO DEFAULT
+    // =====================================================
+    async function resetAsset(slotKey) {
+      if (!confirm('Reset ' + getSlotLabel(slotKey) + ' to the default image?')) return;
+
+      try {
+        var update = {};
+        update[slotKey] = firebase.firestore.FieldValue.delete();
+        update['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        update['updatedBy'] = auth.currentUser.email;
+
+        await db.collection('divisionAssets').doc(selectedDivision).update(update);
+
+        delete currentAssets[slotKey];
+        if (selectedDivision === 'default') delete defaultAssets[slotKey];
+        renderAssetGrid(selectedDivision);
+        showToast(getSlotLabel(slotKey) + (selectedDivision === 'default' ? ' reset to original' : ' override removed'), 'success');
+
+      } catch (err) {
+        console.error('Reset error:', err);
+        showToast('Reset failed: ' + err.message, 'error');
+      }
+    }
+
+    // =====================================================
+    //  HELPERS
+    // =====================================================
+    function getSlotLabel(key) {
+      var slot = ASSET_SLOTS.find(function(s) { return s.key === key; });
+      return slot ? slot.label : key;
+    }
+
+    function showToast(message, type) {
+      var toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast ' + type;
+      requestAnimationFrame(function() {
+        toast.classList.add('show');
+      });
+      setTimeout(function() {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

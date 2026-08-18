@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Assets to Firebase Storage</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; background: #111; color: #eee; }
+    h1 { color: #e30613; }
+    .file-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #333; }
+    .file-row .name { flex: 1; font-family: monospace; font-size: 14px; }
+    .status { font-size: 13px; min-width: 100px; text-align: right; }
+    .status.done { color: #22c55e; }
+    .status.error { color: #ef4444; }
+    .status.uploading { color: #eab308; }
+    button { background: #e30613; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 20px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #c00510; }
+    p.info { color: #999; font-size: 14px; line-height: 1.6; }
+    #log { margin-top: 20px; padding: 12px; background: #1a1a1a; border-radius: 4px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Upload Site Assets to Firebase Storage</h1>
+  <p class="info">
+    This page uploads your NHRA logo and division images to Firebase Storage
+    so they can be used in the Wix HTML embed. Open this file in a browser
+    from the project directory (not inside Wix). You only need to run this once.
+  </p>
+
+  <div id="file-list"></div>
+  <button id="upload-btn" onclick="uploadAll()">UPLOAD ALL ASSETS</button>
+  <div id="log"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey:            "AIzaSyB9pTTJApbqOAwQ7vwAgK7nMZVWAElpwIc",
+      authDomain:        "voting-10a21.firebaseapp.com",
+      projectId:         "voting-10a21",
+      storageBucket:     "voting-10a21.firebasestorage.app",
+      messagingSenderId: "851898047005",
+      appId:             "1:851898047005:web:0f7e1197ba1b8713c484f4"
+    });
+    var storage = firebase.storage();
+
+    var ASSETS = [
+      'nhra-75-logo.png',
+      'nhra-75-logo-small.png',
+      'D1.PNG', 'D1-small.png',
+      'D2.PNG', 'D2-small.png',
+      'D3.PNG', 'D3-small.png',
+      'D4.PNG', 'D4-small.png',
+      'D5.PNG', 'D5-small.png',
+      'D6.PNG', 'D6-small.png',
+      'D7.PNG', 'D7-small.png',
+      'photo-default-1.jpg',
+      'photo-default-2.jpg',
+      'photo-default-3.jpg',
+      'photo-default-4.jpg'
+    ];
+
+    var listEl = document.getElementById('file-list');
+    ASSETS.forEach(function(name) {
+      var row = document.createElement('div');
+      row.className = 'file-row';
+      row.id = 'row-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+      row.innerHTML = '<span class="name">' + name + '</span><span class="status" id="status-' + name.replace(/[^a-zA-Z0-9]/g, '_') + '">pending</span>';
+      listEl.appendChild(row);
+    });
+
+    function log(msg) {
+      var el = document.getElementById('log');
+      el.textContent += msg + '\n';
+      el.scrollTop = el.scrollHeight;
+    }
+
+    async function uploadAll() {
+      document.getElementById('upload-btn').disabled = true;
+      log('Starting uploads...');
+
+      for (var i = 0; i < ASSETS.length; i++) {
+        var name = ASSETS[i];
+        var statusEl = document.getElementById('status-' + name.replace(/[^a-zA-Z0-9]/g, '_'));
+        statusEl.textContent = 'loading...';
+        statusEl.className = 'status uploading';
+
+        try {
+          var resp = await fetch('../' + name);
+          if (!resp.ok) throw new Error('File not found: ' + name);
+          var blob = await resp.blob();
+
+          statusEl.textContent = 'uploading...';
+          var ref = storage.ref('site-assets/' + name);
+          await ref.put(blob, { contentType: blob.type });
+
+          var url = await ref.getDownloadURL();
+          statusEl.textContent = 'done';
+          statusEl.className = 'status done';
+          log('Uploaded: ' + name + ' -> ' + url);
+        } catch(err) {
+          statusEl.textContent = 'error';
+          statusEl.className = 'status error';
+          log('FAILED: ' + name + ' — ' + err.message);
+        }
+      }
+
+      log('\nAll done! Your Wix embed will now load images from Firebase Storage.');
+      document.getElementById('upload-btn').disabled = false;
+    }
+  </script>
+</body>
+</html>

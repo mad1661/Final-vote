@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Division Admin — NHRA 75 Legends</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'display': ['Oswald', 'sans-serif'] },
+          colors: { 'nhra-red': '#e30613' }
+        }
+      }
+    }
+  </script>
+  <style>
+    .form-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: white;
+      width: 100%;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    .form-input:focus { outline: none; border-color: #e30613; background: rgba(255,255,255,0.08); }
+    .form-input::placeholder { color: rgba(255,255,255,0.35); }
+    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; }
+    .card:hover { border-color: rgba(255,255,255,0.2); }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .main-tab {
+      padding: 10px 24px; font-size: 14px; font-weight: 700; letter-spacing: 0.1em;
+      border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s;
+      color: rgba(255,255,255,0.4); background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .main-tab:hover { color: rgba(255,255,255,0.7); }
+    .main-tab.active { color: white; border-bottom-color: #e30613; }
+    .div-tab {
+      padding: 6px 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+      border-radius: 6px; cursor: pointer; transition: all 0.2s;
+      border: 1px solid rgba(255,255,255,0.1); background: transparent; color: rgba(255,255,255,0.5);
+    }
+    .div-tab:hover { border-color: rgba(255,255,255,0.3); color: white; }
+    .div-tab.active { background: #e30613; border-color: #e30613; color: white; }
+    .asset-card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; overflow: hidden; transition: border-color 0.2s;
+    }
+    .asset-card:hover { border-color: rgba(255,255,255,0.25); }
+    .asset-preview {
+      background: #1a1a1a; display: flex; align-items: center; justify-content: center;
+      min-height: 180px; position: relative;
+    }
+    .asset-preview img { max-width: 100%; max-height: 220px; object-fit: contain; }
+    .upload-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.2s; cursor: pointer;
+    }
+    .asset-preview:hover .upload-overlay { opacity: 1; }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 14px 24px;
+      border-radius: 8px; font-weight: 600; font-size: 14px; z-index: 100;
+      transform: translateY(100px); opacity: 0; transition: all 0.3s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #166534; color: #bbf7d0; border: 1px solid #22c55e; }
+    .toast.error { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; }
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-black font-display tracking-wider">DIVISION ADMIN</h1>
+        <p class="text-zinc-500 mt-2">NHRA 75 Legends Nominations</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-zinc-400 mb-2 uppercase tracking-wider font-display">Email</label>
+          <input type="email" id="login-email" class="form-input" placeholder="director@nhradiv1.com" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-zinc-400 mb-2 uppercase tracking-wider font-display">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" id="login-btn"
+                class="w-full bg-nhra-red hover:bg-red-700 text-white text-lg font-bold py-3 px-6 rounded transition-colors font-display tracking-wider mt-2">
+          SIGN IN
+        </button>
+        <p id="login-error" class="hidden text-red-400 text-sm text-center mt-2"></p>
+      </form>
+      <p class="text-zinc-600 text-xs text-center mt-6">Contact the administrator if you need access.</p>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN DASHBOARD ===== -->
+  <div id="dashboard" class="hidden">
+
+    <!-- Header -->
+    <header class="bg-black border-b border-zinc-800 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-black font-display tracking-wider">DIVISION ADMIN</h1>
+          <p id="dash-division-name" class="text-nhra-red text-sm font-display tracking-wider"></p>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="dash-user-email" class="text-zinc-500 text-sm hidden sm:inline"></span>
+          <button id="logout-btn" class="text-zinc-400 hover:text-white text-sm font-display tracking-wider transition-colors">
+            SIGN OUT
+          </button>
+        </div>
+      </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex gap-1">
+        <button class="main-tab active font-display" data-tab="nominations" onclick="switchMainTab('nominations')">NOMINATIONS</button>
+        <button class="main-tab font-display" data-tab="assets" onclick="switchMainTab('assets')">ASSETS</button>
+        <button class="main-tab font-display hidden" data-tab="roles" id="roles-tab-btn" onclick="switchMainTab('roles')">ROLES</button>
+      </div>
+    </header>
+
+    <!-- ===== NOMINATIONS TAB ===== -->
+    <div id="tab-nominations">
+
+    <!-- Stats Bar -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="card p-4 text-center">
+          <div id="stat-total" class="text-3xl font-black font-display text-nhra-red">0</div>
+          <div class="text-zinc-500 text-xs font-display tracking-wider mt-1">TOTAL</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div id="stat-racers" class="text-3xl font-black font-display text-white">0</div>
+          <div class="text-zinc-500 text-xs font-display tracking-wider mt-1">RACERS</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div id="stat-crew" class="text-3xl font-black font-display text-white">0</div>
+          <div class="text-zinc-500 text-xs font-display tracking-wider mt-1">CREW</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div id="stat-other" class="text-3xl font-black font-display text-white">0</div>
+          <div class="text-zinc-500 text-xs font-display tracking-wider mt-1">OTHER</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 pb-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div class="flex gap-3 items-center flex-wrap">
+        <select id="filter-division" class="form-input w-auto text-sm py-2 px-3">
+          <option value="">All Divisions</option>
+          <option value="1">D1 — Northeast</option>
+          <option value="2">D2 — Southeast</option>
+          <option value="3">D3 — North Central</option>
+          <option value="4">D4 — South Central</option>
+          <option value="5">D5 — West Central</option>
+          <option value="6">D6 — Northwest</option>
+          <option value="7">D7 — Pacific</option>
+        </select>
+        <select id="filter-category" class="form-input w-auto text-sm py-2 px-3">
+          <option value="">All Categories</option>
+          <option value="racer">Racers</option>
+          <option value="crew_member">Crew Members</option>
+          <option value="sponsor">Sponsors</option>
+          <option value="track_operator">Track Operators</option>
+          <option value="official">Officials / Volunteers</option>
+          <option value="other">Other</option>
+        </select>
+        <input type="text" id="search-input" class="form-input w-auto text-sm py-2 px-3" placeholder="Search nominees...">
+      </div>
+      <div class="flex gap-2 items-center flex-wrap">
+        <button id="export-btn" class="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-display tracking-wider py-2 px-5 rounded transition-colors">
+          EXPORT CSV
+        </button>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" id="select-all-cb" class="w-4 h-4 accent-nhra-red rounded">
+          <span class="text-xs text-zinc-400 font-display tracking-wider">SELECT ALL</span>
+        </label>
+        <button id="download-selected-btn" disabled class="bg-nhra-red/40 text-white/50 text-sm font-display tracking-wider py-2 px-5 rounded transition-colors cursor-not-allowed">
+          DOWNLOAD SELECTED PHOTOS (0)
+        </button>
+        <button id="delete-selected-btn" class="hidden bg-red-900/60 hover:bg-red-800 text-red-200 text-sm font-display tracking-wider py-2 px-5 rounded transition-colors">
+          DELETE SELECTED (0)
+        </button>
+      </div>
+    </div>
+
+    <!-- Download Progress Bar -->
+    <div id="download-progress" class="hidden max-w-7xl mx-auto px-4 sm:px-6 pb-4">
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span id="progress-text" class="text-sm font-display tracking-wider text-zinc-300">Preparing...</span>
+          <button id="cancel-download-btn" class="text-xs text-zinc-400 hover:text-nhra-red font-display tracking-wider transition-colors">CANCEL</button>
+        </div>
+        <div class="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+          <div id="progress-bar-fill" class="bg-nhra-red h-2.5 rounded-full transition-all duration-300" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nominations List -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+      <div id="nominations-list" class="space-y-3"></div>
+      <div id="empty-state" class="hidden text-center py-20">
+        <div class="text-5xl mb-4">&#128269;</div>
+        <p class="text-zinc-500 text-lg font-display">No nominations found</p>
+        <p class="text-zinc-600 text-sm mt-1">Nominations will appear here as they are submitted.</p>
+      </div>
+      <div id="loading-state" class="text-center py-20">
+        <div class="text-zinc-500 font-display tracking-wider animate-pulse">LOADING NOMINATIONS...</div>
+      </div>
+    </div>
+
+    </div><!-- /tab-nominations -->
+
+    <!-- ===== ASSETS TAB ===== -->
+    <div id="tab-assets" class="hidden">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <div id="asset-division-tabs" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+        <div id="asset-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="asset-loading" class="hidden text-center py-20">
+          <div class="text-zinc-500 font-display tracking-wider animate-pulse">LOADING ASSETS...</div>
+        </div>
+      </div>
+    </div><!-- /tab-assets -->
+
+    <!-- ===== ROLES TAB ===== -->
+    <div id="tab-roles" class="hidden">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-black font-display tracking-wider">ADMIN ROLES</h2>
+          <button id="add-role-btn" class="bg-nhra-red hover:bg-red-700 text-white text-sm font-display tracking-wider py-2 px-5 rounded transition-colors">
+            + ADD ADMIN
+          </button>
+        </div>
+
+        <!-- Add/Edit Role Form -->
+        <div id="role-form-wrap" class="hidden mb-8 card p-6">
+          <h3 id="role-form-title" class="text-lg font-bold font-display tracking-wider mb-4">ADD NEW ADMIN</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1 uppercase tracking-wider font-display">Email</label>
+              <input type="email" id="role-email" class="form-input" placeholder="director@nhradiv1.com">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-zinc-400 mb-1 uppercase tracking-wider font-display">Display Name (optional)</label>
+              <input type="text" id="role-name" class="form-input" placeholder="John Smith">
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider font-display">Divisions</label>
+            <div class="flex flex-wrap gap-2" id="role-div-checkboxes">
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="1"> <span class="text-sm">D1 — Northeast</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="2"> <span class="text-sm">D2 — Southeast</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="3"> <span class="text-sm">D3 — North Central</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="4"> <span class="text-sm">D4 — South Central</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="5"> <span class="text-sm">D5 — West Central</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="6"> <span class="text-sm">D6 — Northwest</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer select-none bg-zinc-800/60 px-3 py-1.5 rounded">
+                <input type="checkbox" class="role-div-cb accent-nhra-red w-4 h-4" value="7"> <span class="text-sm">D7 — Pacific</span>
+              </label>
+            </div>
+          </div>
+          <div class="mb-5">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="role-superadmin-cb" class="accent-nhra-red w-4 h-4">
+              <span class="text-sm font-display tracking-wider text-yellow-400 font-semibold">SUPERADMIN</span>
+              <span class="text-xs text-zinc-500">(can delete nominations &amp; manage roles)</span>
+            </label>
+          </div>
+          <div class="flex gap-3">
+            <button id="role-save-btn" class="bg-nhra-red hover:bg-red-700 text-white text-sm font-display tracking-wider py-2 px-6 rounded transition-colors">
+              SAVE
+            </button>
+            <button id="role-cancel-btn" class="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-display tracking-wider py-2 px-5 rounded transition-colors">
+              CANCEL
+            </button>
+          </div>
+        </div>
+
+        <!-- Roles List -->
+        <div id="roles-list"></div>
+        <div id="roles-loading" class="text-center py-12 text-zinc-500 font-display tracking-wider animate-pulse">
+          LOADING ROLES...
+        </div>
+        <div id="roles-empty" class="hidden text-center py-12 text-zinc-600 font-display tracking-wider">
+          No admin roles configured yet. Click "+ ADD ADMIN" to get started.
+        </div>
+      </div>
+    </div><!-- /tab-roles -->
+
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast"></div>
+
+  <!-- ===== NOMINATION DETAIL MODAL ===== -->
+  <div id="detail-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/80" id="modal-backdrop"></div>
+    <div class="relative bg-zinc-900 border border-zinc-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <button id="modal-close" class="absolute top-4 right-4 text-zinc-400 hover:text-white text-2xl leading-none">&times;</button>
+      <div class="p-6 sm:p-8">
+        <div class="mb-6">
+          <div class="flex items-start gap-4">
+            <div class="flex-1">
+              <h3 id="modal-name" class="text-2xl font-black font-display"></h3>
+              <span id="modal-category" class="badge bg-nhra-red/20 text-nhra-red mt-2"></span>
+            </div>
+          </div>
+          <div id="modal-photo-wrap" class="hidden mt-4">
+            <img id="modal-photo" src="" alt="" class="max-w-full max-h-80 object-contain rounded border-2 border-zinc-700">
+            <a id="modal-photo-dl" href="" download class="inline-flex items-center gap-2 mt-2 text-sm text-nhra-red hover:underline font-display tracking-wider">
+              &#11015; DOWNLOAD PHOTO
+            </a>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <div class="text-zinc-500 text-xs font-display tracking-wider mb-1">YEARS ACTIVE</div>
+            <div id="modal-years" class="text-zinc-200"></div>
+          </div>
+          <div>
+            <div class="text-zinc-500 text-xs font-display tracking-wider mb-1">WHY THEY ARE A LEGEND</div>
+            <div id="modal-reason" class="text-zinc-200 whitespace-pre-wrap leading-relaxed"></div>
+          </div>
+          <hr class="border-zinc-700">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-zinc-500 text-xs font-display tracking-wider mb-1">NOMINATED BY</div>
+              <div id="modal-nominator" class="text-zinc-200"></div>
+            </div>
+            <div>
+              <div class="text-zinc-500 text-xs font-display tracking-wider mb-1">EMAIL</div>
+              <div id="modal-email" class="text-zinc-200"></div>
+            </div>
+          </div>
+          <div>
+            <div class="text-zinc-500 text-xs font-display tracking-wider mb-1">SUBMITTED</div>
+            <div id="modal-date" class="text-zinc-200"></div>
+          </div>
+        </div>
+        <div id="modal-delete-wrap" class="hidden mt-6 pt-4 border-t border-zinc-700">
+          <button id="modal-delete-btn" class="bg-red-900 hover:bg-red-800 text-red-200 text-sm font-display tracking-wider py-2 px-5 rounded transition-colors">
+            DELETE THIS NOMINATION
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FIREBASE SDK ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+
+  <script>
+    // =====================================================
+    //  CONFIG
+    // =====================================================
+    firebase.initializeApp({
+      apiKey:            "AIzaSyB9pTTJApbqOAwQ7vwAgK7nMZVWAElpwIc",
+      authDomain:        "voting-10a21.firebaseapp.com",
+      projectId:         "voting-10a21",
+      storageBucket:     "voting-10a21.firebasestorage.app",
+      messagingSenderId: "851898047005",
+      appId:             "1:851898047005:web:0f7e1197ba1b8713c484f4"
+    });
+
+    var auth    = firebase.auth();
+    var db      = firebase.firestore();
+    var storage = firebase.storage();
+
+    var isSuperAdmin = false;
+    var rolesInitialized = false;
+    var allRoles = [];
+
+    var HARDCODED_SUPERADMIN = 'mdawson@nhra.com';
+
+    var DIVISION_NAMES = {
+      "1": "Northeast Division",
+      "2": "Southeast Division",
+      "3": "North Central Division",
+      "4": "South Central Division",
+      "5": "West Central Division",
+      "6": "Northwest Division",
+      "7": "Pacific Division"
+    };
+
+    var CATEGORY_LABELS = {
+      racer: "Racer",
+      crew_member: "Crew Member",
+      sponsor: "Sponsor",
+      track_operator: "Track Operator",
+      official: "Official / Volunteer",
+      other: "Other"
+    };
+
+    var CATEGORY_COLORS = {
+      racer:          "bg-blue-500/20 text-blue-400",
+      crew_member:    "bg-green-500/20 text-green-400",
+      sponsor:        "bg-yellow-500/20 text-yellow-400",
+      track_operator: "bg-purple-500/20 text-purple-400",
+      official:       "bg-cyan-500/20 text-cyan-400",
+      other:          "bg-zinc-500/20 text-zinc-400"
+    };
+
+    var allNominations = [];
+
+    // =====================================================
+    //  AUTH STATE
+    // =====================================================
+    auth.onAuthStateChanged(function(user) {
+      if (user) {
+        showDashboard(user);
+      } else {
+        showLogin();
+      }
+    });
+
+    // =====================================================
+    //  LOGIN
+    // =====================================================
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('login-email').value;
+      var pass  = document.getElementById('login-password').value;
+      var btn   = document.getElementById('login-btn');
+      var err   = document.getElementById('login-error');
+
+      btn.disabled = true;
+      btn.textContent = 'SIGNING IN...';
+      err.classList.add('hidden');
+
+      auth.signInWithEmailAndPassword(email, pass)
+        .catch(function(error) {
+          err.textContent = error.code === 'auth/invalid-credential'
+            ? 'Invalid email or password.'
+            : error.message;
+          err.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'SIGN IN';
+        });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', function() {
+      auth.signOut();
+    });
+
+    function showLogin() {
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+    }
+
+    // =====================================================
+    //  DASHBOARD
+    // =====================================================
+    async function showDashboard(user) {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('dash-user-email').textContent = user.email;
+
+      var email = user.email.toLowerCase();
+
+      try {
+        var snap = await db.collection('adminRoles').get();
+        allRoles = [];
+        snap.forEach(function(doc) { allRoles.push(Object.assign({ id: doc.id }, doc.data())); });
+      } catch(e) {
+        console.warn('Could not load roles from Firestore:', e);
+        allRoles = [];
+      }
+
+      var myRole = allRoles.find(function(r) { return r.email && r.email.toLowerCase() === email; });
+
+      if (email === HARDCODED_SUPERADMIN) {
+        isSuperAdmin = true;
+      } else if (myRole && myRole.superadmin) {
+        isSuperAdmin = true;
+      } else {
+        isSuperAdmin = false;
+      }
+
+      if (isSuperAdmin) {
+        document.getElementById('delete-selected-btn').classList.remove('hidden');
+        document.getElementById('roles-tab-btn').classList.remove('hidden');
+      }
+
+      var divisions = getUserDivisions(email, myRole);
+      var divLabel = divisions.length === 7
+        ? 'All Divisions'
+        : divisions.map(function(d) { return DIVISION_NAMES[d] || 'Division ' + d; }).join(', ');
+      document.getElementById('dash-division-name').textContent = divLabel;
+
+      loadNominations(divisions);
+      switchMainTab('nominations');
+    }
+
+    function getUserDivisions(email, roleDoc) {
+      if (roleDoc && roleDoc.divisions && roleDoc.divisions.length > 0) return roleDoc.divisions;
+
+      if (email === HARDCODED_SUPERADMIN) return ["1","2","3","4","5","6","7"];
+
+      var m = email.match(/nhradiv(\d)/);
+      if (m) return [m[1]];
+
+      return ["1","2","3","4","5","6","7"];
+    }
+
+    // =====================================================
+    //  LOAD NOMINATIONS
+    // =====================================================
+    function loadNominations(divisions) {
+      document.getElementById('loading-state').classList.remove('hidden');
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('nominations-list').innerHTML = '';
+
+      // Firestore "in" queries support up to 10 values, we have at most 7
+      db.collection('nominations')
+        .where('division', 'in', divisions)
+        .orderBy('submittedAt', 'desc')
+        .onSnapshot(function(snapshot) {
+          allNominations = [];
+          snapshot.forEach(function(doc) {
+            allNominations.push({ id: doc.id, ...doc.data() });
+          });
+          document.getElementById('loading-state').classList.add('hidden');
+          updateStats();
+          renderNominations();
+        }, function(error) {
+          console.error('Firestore error:', error);
+          document.getElementById('loading-state').innerHTML =
+            '<div class="text-red-400">Error loading nominations. Make sure Firestore indexes are set up.<br><span class="text-xs text-zinc-500">' + error.message + '</span></div>';
+        });
+    }
+
+    // =====================================================
+    //  STATS
+    // =====================================================
+    function updateStats() {
+      document.getElementById('stat-total').textContent = allNominations.length;
+      document.getElementById('stat-racers').textContent = allNominations.filter(function(n) { return n.category === 'racer'; }).length;
+      document.getElementById('stat-crew').textContent   = allNominations.filter(function(n) { return n.category === 'crew_member'; }).length;
+      var otherCount = allNominations.filter(function(n) { return n.category !== 'racer' && n.category !== 'crew_member'; }).length;
+      document.getElementById('stat-other').textContent = otherCount;
+    }
+
+    // =====================================================
+    //  SELECTION STATE
+    // =====================================================
+    var selectedNominations = new Set();
+    var downloadCancelled = false;
+
+    function updateDownloadButton() {
+      var btn = document.getElementById('download-selected-btn');
+      var delBtn = document.getElementById('delete-selected-btn');
+      var count = selectedNominations.size;
+      var hasPhotos = false;
+      if (count > 0) {
+        selectedNominations.forEach(function(id) {
+          var n = allNominations.find(function(nom) { return nom.id === id; });
+          if (n && n.photoUrl) hasPhotos = true;
+        });
+      }
+      btn.textContent = 'DOWNLOAD SELECTED PHOTOS (' + count + ')';
+      if (count > 0 && hasPhotos) {
+        btn.disabled = false;
+        btn.className = 'bg-nhra-red hover:bg-red-700 text-white text-sm font-display tracking-wider py-2 px-5 rounded transition-colors cursor-pointer';
+      } else {
+        btn.disabled = true;
+        btn.className = 'bg-nhra-red/40 text-white/50 text-sm font-display tracking-wider py-2 px-5 rounded transition-colors cursor-not-allowed';
+      }
+      if (isSuperAdmin) {
+        delBtn.textContent = 'DELETE SELECTED (' + count + ')';
+      }
+    }
+
+    function updateSelectAllState() {
+      var cb = document.getElementById('select-all-cb');
+      var visible = getFilteredNominations();
+      if (visible.length === 0) { cb.checked = false; cb.indeterminate = false; return; }
+      var allChecked = visible.every(function(n) { return selectedNominations.has(n.id); });
+      var someChecked = visible.some(function(n) { return selectedNominations.has(n.id); });
+      cb.checked = allChecked;
+      cb.indeterminate = !allChecked && someChecked;
+    }
+
+    // =====================================================
+    //  RENDER NOMINATIONS
+    // =====================================================
+    function getFilteredNominations() {
+      var division = document.getElementById('filter-division').value;
+      var category = document.getElementById('filter-category').value;
+      var search   = document.getElementById('search-input').value.toLowerCase();
+
+      return allNominations.filter(function(n) {
+        if (division && n.division !== division) return false;
+        if (category && n.category !== category) return false;
+        if (search && n.nomineeName.toLowerCase().indexOf(search) === -1
+            && (n.reason || '').toLowerCase().indexOf(search) === -1
+            && (n.nominatorName || '').toLowerCase().indexOf(search) === -1) return false;
+        return true;
+      });
+    }
+
+    function renderNominations() {
+      var filtered = getFilteredNominations();
+
+      var list = document.getElementById('nominations-list');
+      var empty = document.getElementById('empty-state');
+
+      if (filtered.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      list.innerHTML = filtered.map(function(n) {
+        var date = n.submittedAt ? new Date(n.submittedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending';
+        var catLabel = CATEGORY_LABELS[n.category] || n.category;
+        var catColor = CATEGORY_COLORS[n.category] || CATEGORY_COLORS.other;
+        var divLabel = DIVISION_NAMES[n.division] || 'Div ' + n.division;
+        var photoThumb = n.photoUrl
+          ? '<img src="' + n.photoUrl + '" alt="" class="w-16 h-16 object-cover rounded border border-zinc-700 shrink-0">'
+          : '';
+        var isChecked = selectedNominations.has(n.id);
+
+        return '<div class="card p-4 sm:p-5 hover:bg-white/[0.03] transition-colors flex items-center gap-3' + (isChecked ? ' ring-1 ring-nhra-red/40' : '') + '">'
+          + '<input type="checkbox" class="nom-checkbox w-5 h-5 accent-nhra-red rounded shrink-0 cursor-pointer" data-id="' + n.id + '"' + (isChecked ? ' checked' : '') + '>'
+          + '<div class="flex-1 min-w-0 cursor-pointer" onclick="showDetail(\'' + n.id + '\')">'
+          + '<div class="flex items-start gap-4">'
+          + '<div class="flex-1 min-w-0">'
+          + '<div class="flex items-center gap-3 flex-wrap">'
+          + '<h3 class="text-lg font-bold font-display tracking-wide">' + escapeHtml(n.nomineeName) + '</h3>'
+          + '<span class="badge ' + catColor + '">' + catLabel + '</span>'
+          + (n.photoUrl ? '<span class="text-zinc-500 text-xs">&#128247;</span>' : '')
+          + '</div>'
+          + '<p class="text-zinc-400 text-sm mt-2 line-clamp-2">' + escapeHtml((n.reason || '').substring(0, 200)) + '</p>'
+          + '<div class="flex items-center gap-4 mt-3 text-xs text-zinc-500">'
+          + '<span>By: ' + escapeHtml(n.nominatorName || 'Unknown') + '</span>'
+          + '<span>' + divLabel + '</span>'
+          + '<span>' + date + '</span>'
+          + '</div>'
+          + '</div>'
+          + photoThumb
+          + '</div>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+
+      updateSelectAllState();
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    document.getElementById('filter-division').addEventListener('change', renderNominations);
+    document.getElementById('filter-category').addEventListener('change', renderNominations);
+    document.getElementById('search-input').addEventListener('input', renderNominations);
+
+    // =====================================================
+    //  DETAIL MODAL
+    // =====================================================
+    var currentDetailId = null;
+
+    function showDetail(id) {
+      var n = allNominations.find(function(x) { return x.id === id; });
+      if (!n) return;
+
+      currentDetailId = id;
+
+      document.getElementById('modal-name').textContent = n.nomineeName;
+      document.getElementById('modal-category').textContent = CATEGORY_LABELS[n.category] || n.category;
+      document.getElementById('modal-category').className = 'badge ' + (CATEGORY_COLORS[n.category] || CATEGORY_COLORS.other);
+      document.getElementById('modal-years').textContent = n.yearsActive || 'Not specified';
+      document.getElementById('modal-reason').textContent = n.reason || '';
+      document.getElementById('modal-nominator').textContent = n.nominatorName || 'Unknown';
+      document.getElementById('modal-email').textContent = n.nominatorEmail || '';
+
+      var date = n.submittedAt ? new Date(n.submittedAt.seconds * 1000).toLocaleString() : 'Pending';
+      document.getElementById('modal-date').textContent = date;
+
+      var photoWrap = document.getElementById('modal-photo-wrap');
+      var photo = document.getElementById('modal-photo');
+      var photoDl = document.getElementById('modal-photo-dl');
+      if (n.photoUrl) {
+        photo.src = n.photoUrl;
+        photoDl.href = n.photoUrl;
+        photoDl.download = (n.nomineeName || 'nominee').replace(/[^a-zA-Z0-9 ]/g, '') + '-photo';
+        photoWrap.classList.remove('hidden');
+      } else {
+        photoWrap.classList.add('hidden');
+      }
+
+      if (isSuperAdmin) {
+        document.getElementById('modal-delete-wrap').classList.remove('hidden');
+        document.getElementById('modal-delete-btn').onclick = function() { deleteNomination(n.id); };
+      } else {
+        document.getElementById('modal-delete-wrap').classList.add('hidden');
+      }
+
+      document.getElementById('detail-modal').classList.remove('hidden');
+    }
+
+    document.getElementById('modal-close').addEventListener('click', function() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    });
+    document.getElementById('modal-backdrop').addEventListener('click', function() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    });
+
+    // =====================================================
+    //  EXPORT CSV
+    // =====================================================
+    document.getElementById('export-btn').addEventListener('click', function() {
+      var exportList = getFilteredNominations();
+      if (exportList.length === 0) { alert('No nominations to export. Adjust your filters.'); return; }
+
+      var divFilter = document.getElementById('filter-division').value;
+      var divSuffix = divFilter ? '-D' + divFilter : '';
+
+      var headers = ['Nominee Name','Category','Years Active','Reason','Nominator Name','Nominator Email','Division','Division Name','Photo URL','Submitted'];
+      var rows = exportList.map(function(n) {
+        var date = n.submittedAt ? new Date(n.submittedAt.seconds * 1000).toISOString() : '';
+        return [
+          csvEscape(n.nomineeName),
+          csvEscape(CATEGORY_LABELS[n.category] || n.category),
+          csvEscape(n.yearsActive || ''),
+          csvEscape(n.reason || ''),
+          csvEscape(n.nominatorName || ''),
+          csvEscape(n.nominatorEmail || ''),
+          n.division,
+          csvEscape(n.divisionName || ''),
+          n.photoUrl || '',
+          date
+        ].join(',');
+      });
+
+      var csv = headers.join(',') + '\n' + rows.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'nominations' + divSuffix + '-' + new Date().toISOString().slice(0,10) + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function csvEscape(str) {
+      if (!str) return '';
+      if (str.indexOf(',') !== -1 || str.indexOf('"') !== -1 || str.indexOf('\n') !== -1) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    // =====================================================
+    //  MAIN TAB SWITCHING
+    // =====================================================
+    var assetsInitialized = false;
+
+    function switchMainTab(tab) {
+      document.querySelectorAll('.main-tab').forEach(function(t) {
+        t.classList.remove('active');
+        if (t.getAttribute('data-tab') === tab) t.classList.add('active');
+      });
+
+      document.getElementById('tab-nominations').classList.add('hidden');
+      document.getElementById('tab-assets').classList.add('hidden');
+      document.getElementById('tab-roles').classList.add('hidden');
+
+      if (tab === 'nominations') {
+        document.getElementById('tab-nominations').classList.remove('hidden');
+      } else if (tab === 'assets') {
+        document.getElementById('tab-assets').classList.remove('hidden');
+        if (!assetsInitialized) {
+          assetsInitialized = true;
+          buildAssetTabs();
+          loadDivisionAssets(selectedAssetDivision);
+        }
+      } else if (tab === 'roles') {
+        document.getElementById('tab-roles').classList.remove('hidden');
+        if (!rolesInitialized) {
+          rolesInitialized = true;
+          loadRoles();
+        }
+      }
+    }
+
+    // =====================================================
+    //  ASSET MANAGER
+    // =====================================================
+    var HOSTING_BASE = 'https://voting-10a21.web.app/';
+
+    var ASSET_SLOTS = [
+      { key: "photo1", label: "Hero Photo 1",          defaultFile: "photo-default-1.jpg", description: "Top-left scrapbook photo" },
+      { key: "photo2", label: "Hero Photo 2",          defaultFile: "photo-default-2.jpg", description: "Top-center tall photo" },
+      { key: "photo3", label: "Hero Photo 3",          defaultFile: "photo-default-3.jpg", description: "Top-right scrapbook photo" },
+      { key: "photo4", label: "Hero Photo 4",          defaultFile: "photo-default-4.jpg", description: "Bottom-center wide photo" },
+      { key: "logo75", label: "75th Anniversary Logo", defaultFile: "nhra-75-logo.png",    description: "Main 75th logo used in splash, hero, and form" }
+    ];
+
+    var selectedAssetDivision = "default";
+    var currentDivAssets = {};
+    var defaultBaseAssets = {};
+
+    function buildAssetTabs() {
+      var container = document.getElementById('asset-division-tabs');
+      container.innerHTML = '';
+
+      var defaultBtn = document.createElement('button');
+      defaultBtn.className = 'div-tab font-display active';
+      defaultBtn.textContent = 'DEFAULT — All Divisions';
+      defaultBtn.onclick = function() {
+        selectedAssetDivision = 'default';
+        document.querySelectorAll('#asset-division-tabs .div-tab').forEach(function(t) { t.classList.remove('active'); });
+        defaultBtn.classList.add('active');
+        loadDivisionAssets('default');
+      };
+      container.appendChild(defaultBtn);
+
+      Object.keys(DIVISION_NAMES).forEach(function(divNum) {
+        var btn = document.createElement('button');
+        btn.className = 'div-tab font-display';
+        btn.textContent = 'D' + divNum + ' — ' + DIVISION_NAMES[divNum];
+        btn.onclick = function() {
+          selectedAssetDivision = divNum;
+          document.querySelectorAll('#asset-division-tabs .div-tab').forEach(function(t) { t.classList.remove('active'); });
+          btn.classList.add('active');
+          loadDivisionAssets(divNum);
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function loadDivisionAssets(divNum) {
+      var grid = document.getElementById('asset-grid');
+      var loading = document.getElementById('asset-loading');
+      grid.innerHTML = '';
+      loading.classList.remove('hidden');
+
+      if (divNum === 'default') {
+        db.collection('divisionAssets').doc('default').get()
+          .then(function(doc) {
+            currentDivAssets = doc.exists ? doc.data() : {};
+            defaultBaseAssets = currentDivAssets;
+            loading.classList.add('hidden');
+            renderAssetGrid(divNum);
+          })
+          .catch(function(err) {
+            console.error('Error loading assets:', err);
+            currentDivAssets = {};
+            defaultBaseAssets = {};
+            loading.classList.add('hidden');
+            renderAssetGrid(divNum);
+          });
+      } else {
+        Promise.all([
+          db.collection('divisionAssets').doc(divNum).get(),
+          db.collection('divisionAssets').doc('default').get()
+        ]).then(function(results) {
+          currentDivAssets = results[0].exists ? results[0].data() : {};
+          defaultBaseAssets = results[1].exists ? results[1].data() : {};
+          loading.classList.add('hidden');
+          renderAssetGrid(divNum);
+        }).catch(function(err) {
+          console.error('Error loading assets:', err);
+          currentDivAssets = {};
+          defaultBaseAssets = {};
+          loading.classList.add('hidden');
+          renderAssetGrid(divNum);
+        });
+      }
+    }
+
+    function renderAssetGrid(divNum) {
+      var grid = document.getElementById('asset-grid');
+      grid.innerHTML = '';
+      var isDefaultTab = divNum === 'default';
+
+      var header = document.createElement('div');
+      header.className = 'col-span-full mb-2';
+      if (isDefaultTab) {
+        header.innerHTML = '<p class="text-zinc-400 text-sm">These are the <strong class="text-white">base photos and logo</strong> used by all divisions. Upload here to change what every division sees by default.</p>';
+      } else {
+        header.innerHTML = '<p class="text-zinc-400 text-sm">Override specific images for <strong class="text-white">' + DIVISION_NAMES[divNum] + '</strong> only. Divisions without overrides use the DEFAULT tab images.</p>';
+      }
+      grid.appendChild(header);
+
+      ASSET_SLOTS.forEach(function(slot) {
+        var customUrl = currentDivAssets[slot.key] || '';
+        var baseDefaultUrl = (!isDefaultTab && defaultBaseAssets[slot.key]) || '';
+        var hardcodedUrl = HOSTING_BASE + slot.defaultFile;
+        var displayUrl, statusLabel, statusClass, showReset;
+
+        if (isDefaultTab) {
+          displayUrl = customUrl || hardcodedUrl;
+          showReset = !!customUrl;
+          statusLabel = customUrl ? 'UPLOADED' : 'ORIGINAL';
+          statusClass = customUrl ? 'text-green-400 bg-green-500/10' : 'text-zinc-500 bg-zinc-800';
+        } else {
+          if (customUrl) {
+            displayUrl = customUrl;
+            statusLabel = 'DIVISION OVERRIDE';
+            statusClass = 'text-green-400 bg-green-500/10';
+            showReset = true;
+          } else if (baseDefaultUrl) {
+            displayUrl = baseDefaultUrl;
+            statusLabel = 'FROM DEFAULT';
+            statusClass = 'text-blue-400 bg-blue-500/10';
+            showReset = false;
+          } else {
+            displayUrl = hardcodedUrl;
+            statusLabel = 'ORIGINAL';
+            statusClass = 'text-zinc-500 bg-zinc-800';
+            showReset = false;
+          }
+        }
+
+        var card = document.createElement('div');
+        card.className = 'asset-card';
+        card.innerHTML =
+          '<div class="asset-preview" id="preview-' + slot.key + '">'
+          + '<img src="' + displayUrl + '" alt="' + slot.label + '" onerror="this.src=\'' + hardcodedUrl + '\'">'
+          + '<div class="upload-overlay" onclick="triggerAssetUpload(\'' + slot.key + '\')">'
+          + '  <div class="text-center">'
+          + '    <svg class="w-8 h-8 mx-auto mb-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'
+          + '    <span class="text-sm font-display tracking-wider">CLICK TO ' + (isDefaultTab ? 'UPLOAD' : 'OVERRIDE') + '</span>'
+          + '  </div>'
+          + '</div>'
+          + '</div>'
+          + '<div class="p-4">'
+          + '  <div class="flex items-start justify-between gap-3">'
+          + '    <div>'
+          + '      <h3 class="font-bold font-display tracking-wider text-sm">' + slot.label + '</h3>'
+          + '      <p class="text-zinc-500 text-xs mt-1">' + slot.description + '</p>'
+          + '    </div>'
+          + '    <span class="text-xs font-display tracking-wider ' + statusClass + ' px-2 py-0.5 rounded shrink-0">' + statusLabel + '</span>'
+          + '  </div>'
+          + (showReset
+            ? '<button onclick="resetDivAsset(\'' + slot.key + '\')" class="text-xs text-zinc-400 hover:text-nhra-red mt-3 font-display tracking-wider transition-colors">' + (isDefaultTab ? 'RESET TO ORIGINAL' : 'REMOVE OVERRIDE') + '</button>'
+            : '')
+          + '</div>';
+        grid.appendChild(card);
+      });
+
+      var heroTitle, heroSubtitle, heroTextHidden;
+      var splashLine1, splashLine2;
+      if (isDefaultTab) {
+        heroTitle = currentDivAssets.heroTitle !== undefined ? currentDivAssets.heroTitle : '';
+        heroSubtitle = currentDivAssets.heroSubtitle !== undefined ? currentDivAssets.heroSubtitle : '';
+        heroTextHidden = currentDivAssets.heroTextHidden || false;
+        splashLine1 = currentDivAssets.splashLine1 !== undefined ? currentDivAssets.splashLine1 : '';
+        splashLine2 = currentDivAssets.splashLine2 !== undefined ? currentDivAssets.splashLine2 : '';
+      } else {
+        heroTitle = currentDivAssets.heroTitle !== undefined ? currentDivAssets.heroTitle : '';
+        heroSubtitle = currentDivAssets.heroSubtitle !== undefined ? currentDivAssets.heroSubtitle : '';
+        heroTextHidden = currentDivAssets.heroTextHidden !== undefined ? currentDivAssets.heroTextHidden : '';
+        splashLine1 = currentDivAssets.splashLine1 !== undefined ? currentDivAssets.splashLine1 : '';
+        splashLine2 = currentDivAssets.splashLine2 !== undefined ? currentDivAssets.splashLine2 : '';
+      }
+
+      // --- Splash text card ---
+      var splashCard = document.createElement('div');
+      splashCard.className = 'col-span-full asset-card p-6 mt-2';
+
+      var hasCustomSplash = !isDefaultTab && (currentDivAssets.splashLine1 !== undefined || currentDivAssets.splashLine2 !== undefined);
+
+      splashCard.innerHTML =
+        '<div class="flex items-center justify-between mb-4">'
+        + '<div>'
+        + '  <h3 class="font-bold font-display tracking-wider text-sm">SPLASH SCREEN TEXT</h3>'
+        + '  <p class="text-zinc-500 text-xs mt-1">The large text that appears on the intro splash screen. Leave blank to keep the default.</p>'
+        + '</div>'
+        + (hasCustomSplash
+          ? '<button onclick="resetSplashSettings()" class="text-xs text-zinc-400 hover:text-nhra-red font-display tracking-wider transition-colors">REMOVE OVERRIDE</button>'
+          : '')
+        + '</div>'
+        + '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">'
+        + '  <div>'
+        + '    <label class="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider font-display">Line 1 <span class="text-zinc-600">(default: 75)</span></label>'
+        + '    <input type="text" id="splash-line1-input" class="form-input text-sm py-2" placeholder="75" value="' + escapeAttr(splashLine1) + '">'
+        + '  </div>'
+        + '  <div>'
+        + '    <label class="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider font-display">Line 2 <span class="text-zinc-600">(default: LEGENDS)</span></label>'
+        + '    <input type="text" id="splash-line2-input" class="form-input text-sm py-2" placeholder="LEGENDS" value="' + escapeAttr(splashLine2) + '">'
+        + '  </div>'
+        + '</div>'
+        + '<div class="flex items-center gap-6">'
+        + '  <button onclick="saveSplashSettings()" class="bg-nhra-red hover:bg-red-700 text-white text-sm font-display tracking-wider py-2 px-6 rounded transition-colors">SAVE SPLASH TEXT</button>'
+        + '</div>';
+      grid.appendChild(splashCard);
+
+      // --- Hero heading text card ---
+      var textCard = document.createElement('div');
+      textCard.className = 'col-span-full asset-card p-6 mt-2';
+
+      var hasCustomText = !isDefaultTab && (currentDivAssets.heroTitle !== undefined || currentDivAssets.heroSubtitle !== undefined || currentDivAssets.heroTextHidden !== undefined);
+
+      textCard.innerHTML =
+        '<div class="flex items-center justify-between mb-4">'
+        + '<div>'
+        + '  <h3 class="font-bold font-display tracking-wider text-sm">HERO HEADING TEXT</h3>'
+        + '  <p class="text-zinc-500 text-xs mt-1">The heading that appears below the 75th logo in the hero section. Leave blank to keep the default.</p>'
+        + '</div>'
+        + (hasCustomText
+          ? '<button onclick="resetTextSettings()" class="text-xs text-zinc-400 hover:text-nhra-red font-display tracking-wider transition-colors">REMOVE OVERRIDE</button>'
+          : '')
+        + '</div>'
+        + '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">'
+        + '  <div>'
+        + '    <label class="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider font-display">Line 1 <span class="text-zinc-600">(default: 75 LEGENDS)</span></label>'
+        + '    <input type="text" id="hero-title-input" class="form-input text-sm py-2" placeholder="75 LEGENDS" value="' + escapeAttr(heroTitle) + '">'
+        + '  </div>'
+        + '  <div>'
+        + '    <label class="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider font-display">Line 2 <span class="text-zinc-600">(default: OF THEIR DIVISION)</span></label>'
+        + '    <input type="text" id="hero-subtitle-input" class="form-input text-sm py-2" placeholder="OF THEIR DIVISION" value="' + escapeAttr(heroSubtitle) + '">'
+        + '  </div>'
+        + '</div>'
+        + '<div class="flex items-center gap-6">'
+        + '  <label class="flex items-center gap-2 cursor-pointer">'
+        + '    <input type="checkbox" id="hero-text-hidden" ' + (heroTextHidden === true ? 'checked' : '') + ' class="w-4 h-4 accent-nhra-red rounded">'
+        + '    <span class="text-sm text-zinc-300 font-display tracking-wider">HIDE HEADING ENTIRELY</span>'
+        + '  </label>'
+        + '  <button onclick="saveTextSettings()" class="bg-nhra-red hover:bg-red-700 text-white text-sm font-display tracking-wider py-2 px-6 rounded transition-colors">SAVE TEXT</button>'
+        + '</div>';
+      grid.appendChild(textCard);
+    }
+
+    // =====================================================
+    //  IMAGE OPTIMIZATION
+    // =====================================================
+    function optimizeImage(file, maxWidth, quality) {
+      maxWidth = maxWidth || 1920;
+      quality = quality || 0.85;
+      if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') {
+        return Promise.resolve(file);
+      }
+      return new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() {
+          var w = img.width, h = img.height;
+          if (w <= maxWidth && file.size < 500 * 1024) {
+            URL.revokeObjectURL(img.src);
+            resolve(file);
+            return;
+          }
+          if (w > maxWidth) {
+            h = Math.round(h * (maxWidth / w));
+            w = maxWidth;
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(function(blob) {
+            URL.revokeObjectURL(img.src);
+            resolve(blob && blob.size < file.size ? blob : file);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = function() {
+          URL.revokeObjectURL(img.src);
+          resolve(file);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    function triggerAssetUpload(slotKey) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = function() {
+        if (input.files.length) uploadDivAsset(slotKey, input.files[0]);
+      };
+      input.click();
+    }
+
+    async function uploadDivAsset(slotKey, file) {
+      if (!file.type.startsWith('image/')) { showToast('Please select an image file.', 'error'); return; }
+      if (file.size > 10 * 1024 * 1024) { showToast('File must be under 10 MB.', 'error'); return; }
+
+      var previewEl = document.getElementById('preview-' + slotKey);
+      if (previewEl) {
+        var overlay = previewEl.querySelector('.upload-overlay');
+        if (overlay) overlay.innerHTML = '<div class="spinner"></div>';
+      }
+
+      try {
+        var isLogo = slotKey === 'logo75';
+        var optimized = isLogo ? file : await optimizeImage(file, 1920, 0.85);
+        var ext = optimized === file
+          ? file.name.split('.').pop().toLowerCase()
+          : 'jpg';
+        var storagePath = 'division-assets/' + selectedAssetDivision + '/' + slotKey + '.' + ext;
+        var ref = storage.ref(storagePath);
+        var snap = await ref.put(optimized);
+        var downloadUrl = await snap.ref.getDownloadURL();
+
+        var update = {};
+        update[slotKey] = downloadUrl;
+        update['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        update['updatedBy'] = auth.currentUser.email;
+        await db.collection('divisionAssets').doc(selectedAssetDivision).set(update, { merge: true });
+
+        currentDivAssets[slotKey] = downloadUrl;
+        if (selectedAssetDivision === 'default') defaultBaseAssets[slotKey] = downloadUrl;
+        renderAssetGrid(selectedAssetDivision);
+
+        var label = selectedAssetDivision === 'default' ? 'All Divisions' : 'D' + selectedAssetDivision;
+        showToast(getAssetSlotLabel(slotKey) + ' updated for ' + label, 'success');
+      } catch (err) {
+        console.error('Upload error:', err);
+        showToast('Upload failed: ' + err.message, 'error');
+        renderAssetGrid(selectedAssetDivision);
+      }
+    }
+
+    async function resetDivAsset(slotKey) {
+      var resetLabel = selectedAssetDivision === 'default' ? 'Reset to original?' : 'Remove division override?';
+      if (!confirm(resetLabel)) return;
+      try {
+        var update = {};
+        update[slotKey] = firebase.firestore.FieldValue.delete();
+        update['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        update['updatedBy'] = auth.currentUser.email;
+        await db.collection('divisionAssets').doc(selectedAssetDivision).update(update);
+
+        delete currentDivAssets[slotKey];
+        if (selectedAssetDivision === 'default') delete defaultBaseAssets[slotKey];
+        renderAssetGrid(selectedAssetDivision);
+        showToast(getAssetSlotLabel(slotKey) + (selectedAssetDivision === 'default' ? ' reset to original' : ' override removed'), 'success');
+      } catch (err) {
+        console.error('Reset error:', err);
+        showToast('Reset failed: ' + err.message, 'error');
+      }
+    }
+
+    async function saveTextSettings() {
+      var title = document.getElementById('hero-title-input').value;
+      var subtitle = document.getElementById('hero-subtitle-input').value;
+      var hidden = document.getElementById('hero-text-hidden').checked;
+
+      try {
+        var update = {
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: auth.currentUser.email
+        };
+
+        if (title) { update.heroTitle = title; } else { update.heroTitle = firebase.firestore.FieldValue.delete(); }
+        if (subtitle) { update.heroSubtitle = subtitle; } else { update.heroSubtitle = firebase.firestore.FieldValue.delete(); }
+        if (hidden) { update.heroTextHidden = true; } else { update.heroTextHidden = firebase.firestore.FieldValue.delete(); }
+
+        var docRef = db.collection('divisionAssets').doc(selectedAssetDivision);
+        var doc = await docRef.get();
+        if (doc.exists) {
+          await docRef.update(update);
+        } else {
+          if (!title) delete update.heroTitle;
+          if (!subtitle) delete update.heroSubtitle;
+          if (!hidden) delete update.heroTextHidden;
+          await docRef.set(update);
+        }
+
+        if (title) currentDivAssets.heroTitle = title; else delete currentDivAssets.heroTitle;
+        if (subtitle) currentDivAssets.heroSubtitle = subtitle; else delete currentDivAssets.heroSubtitle;
+        if (hidden) currentDivAssets.heroTextHidden = true; else delete currentDivAssets.heroTextHidden;
+
+        if (selectedAssetDivision === 'default') defaultBaseAssets = Object.assign({}, currentDivAssets);
+
+        var label = selectedAssetDivision === 'default' ? 'All Divisions' : 'D' + selectedAssetDivision;
+        showToast('Text settings saved for ' + label, 'success');
+      } catch (err) {
+        console.error('Save text error:', err);
+        showToast('Save failed: ' + err.message, 'error');
+      }
+    }
+
+    async function resetTextSettings() {
+      if (!confirm('Remove text overrides for this division?')) return;
+      try {
+        await db.collection('divisionAssets').doc(selectedAssetDivision).update({
+          heroTitle: firebase.firestore.FieldValue.delete(),
+          heroSubtitle: firebase.firestore.FieldValue.delete(),
+          heroTextHidden: firebase.firestore.FieldValue.delete(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: auth.currentUser.email
+        });
+        delete currentDivAssets.heroTitle;
+        delete currentDivAssets.heroSubtitle;
+        delete currentDivAssets.heroTextHidden;
+        renderAssetGrid(selectedAssetDivision);
+        showToast('Text overrides removed', 'success');
+      } catch (err) {
+        console.error('Reset text error:', err);
+        showToast('Reset failed: ' + err.message, 'error');
+      }
+    }
+
+    async function saveSplashSettings() {
+      var line1 = document.getElementById('splash-line1-input').value;
+      var line2 = document.getElementById('splash-line2-input').value;
+
+      try {
+        var update = {
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: auth.currentUser.email
+        };
+
+        if (line1) { update.splashLine1 = line1; } else { update.splashLine1 = firebase.firestore.FieldValue.delete(); }
+        if (line2) { update.splashLine2 = line2; } else { update.splashLine2 = firebase.firestore.FieldValue.delete(); }
+
+        var docRef = db.collection('divisionAssets').doc(selectedAssetDivision);
+        var doc = await docRef.get();
+        if (doc.exists) {
+          await docRef.update(update);
+        } else {
+          if (!line1) delete update.splashLine1;
+          if (!line2) delete update.splashLine2;
+          await docRef.set(update);
+        }
+
+        if (line1) currentDivAssets.splashLine1 = line1; else delete currentDivAssets.splashLine1;
+        if (line2) currentDivAssets.splashLine2 = line2; else delete currentDivAssets.splashLine2;
+
+        if (selectedAssetDivision === 'default') defaultBaseAssets = Object.assign({}, currentDivAssets);
+
+        var label = selectedAssetDivision === 'default' ? 'All Divisions' : 'D' + selectedAssetDivision;
+        showToast('Splash text saved for ' + label, 'success');
+      } catch (err) {
+        console.error('Save splash text error:', err);
+        showToast('Save failed: ' + err.message, 'error');
+      }
+    }
+
+    async function resetSplashSettings() {
+      if (!confirm('Remove splash text overrides for this division?')) return;
+      try {
+        await db.collection('divisionAssets').doc(selectedAssetDivision).update({
+          splashLine1: firebase.firestore.FieldValue.delete(),
+          splashLine2: firebase.firestore.FieldValue.delete(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: auth.currentUser.email
+        });
+        delete currentDivAssets.splashLine1;
+        delete currentDivAssets.splashLine2;
+        renderAssetGrid(selectedAssetDivision);
+        showToast('Splash text overrides removed', 'success');
+      } catch (err) {
+        console.error('Reset splash error:', err);
+        showToast('Reset failed: ' + err.message, 'error');
+      }
+    }
+
+    function escapeAttr(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function getAssetSlotLabel(key) {
+      var slot = ASSET_SLOTS.find(function(s) { return s.key === key; });
+      return slot ? slot.label : key;
+    }
+
+    function showToast(message, type) {
+      var toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast ' + type;
+      requestAnimationFrame(function() { toast.classList.add('show'); });
+      setTimeout(function() { toast.classList.remove('show'); }, 3500);
+    }
+
+    // =====================================================
+    //  CHECKBOX HANDLING
+    // =====================================================
+    document.getElementById('nominations-list').addEventListener('change', function(e) {
+      if (!e.target.classList.contains('nom-checkbox')) return;
+      var id = e.target.dataset.id;
+      if (e.target.checked) {
+        selectedNominations.add(id);
+        e.target.closest('.card').classList.add('ring-1', 'ring-nhra-red/40');
+      } else {
+        selectedNominations.delete(id);
+        e.target.closest('.card').classList.remove('ring-1', 'ring-nhra-red/40');
+      }
+      updateDownloadButton();
+      updateSelectAllState();
+    });
+
+    document.getElementById('select-all-cb').addEventListener('change', function() {
+      var visible = getFilteredNominations();
+      if (this.checked) {
+        visible.forEach(function(n) { selectedNominations.add(n.id); });
+      } else {
+        visible.forEach(function(n) { selectedNominations.delete(n.id); });
+      }
+      renderNominations();
+      updateDownloadButton();
+    });
+
+    // =====================================================
+    //  ROLES MANAGEMENT (SUPERADMIN ONLY)
+    // =====================================================
+    var editingRoleId = null;
+
+    async function loadRoles() {
+      document.getElementById('roles-loading').classList.remove('hidden');
+      document.getElementById('roles-empty').classList.add('hidden');
+      document.getElementById('roles-list').innerHTML = '';
+
+      try {
+        var snap = await db.collection('adminRoles').orderBy('email').get();
+        allRoles = [];
+        snap.forEach(function(doc) { allRoles.push(Object.assign({ id: doc.id }, doc.data())); });
+        renderRoles();
+      } catch(e) {
+        console.error('Load roles error:', e);
+        document.getElementById('roles-loading').classList.add('hidden');
+        showToast('Failed to load roles: ' + e.message, 'error');
+      }
+    }
+
+    function renderRoles() {
+      document.getElementById('roles-loading').classList.add('hidden');
+      var list = document.getElementById('roles-list');
+
+      if (allRoles.length === 0) {
+        document.getElementById('roles-empty').classList.remove('hidden');
+        list.innerHTML = '';
+        return;
+      }
+
+      document.getElementById('roles-empty').classList.add('hidden');
+      var html = '<div class="space-y-3">';
+
+      allRoles.forEach(function(r) {
+        var divBadges = (r.divisions || []).map(function(d) {
+          return '<span class="inline-block bg-zinc-700 text-zinc-300 text-xs px-2 py-0.5 rounded font-display">D' + d + '</span>';
+        }).join(' ');
+
+        if (!divBadges) divBadges = '<span class="text-zinc-600 text-xs italic">No divisions</span>';
+
+        var superBadge = r.superadmin
+          ? '<span class="inline-block bg-yellow-500/20 text-yellow-400 text-xs px-2 py-0.5 rounded font-display font-semibold tracking-wider">SUPERADMIN</span>'
+          : '';
+
+        var nameStr = r.displayName ? '<span class="text-zinc-400 text-sm ml-2">' + escapeAttr(r.displayName) + '</span>' : '';
+        var isHardcoded = r.email && r.email.toLowerCase() === HARDCODED_SUPERADMIN;
+
+        html += '<div class="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">';
+        html += '  <div class="flex-1 min-w-0">';
+        html += '    <div class="flex items-center gap-2 flex-wrap">';
+        html += '      <span class="text-white font-semibold text-sm truncate">' + escapeAttr(r.email || '') + '</span>' + nameStr;
+        html += '      ' + superBadge;
+        html += '    </div>';
+        html += '    <div class="flex flex-wrap gap-1 mt-1.5">' + divBadges + '</div>';
+        html += '  </div>';
+        html += '  <div class="flex gap-2 flex-shrink-0">';
+        html += '    <button onclick="editRole(\'' + escapeAttr(r.id) + '\')" class="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-display tracking-wider py-1.5 px-4 rounded transition-colors">EDIT</button>';
+        if (!isHardcoded) {
+          html += '    <button onclick="deleteRole(\'' + escapeAttr(r.id) + '\')" class="bg-red-900/40 hover:bg-red-900/70 text-red-300 text-xs font-display tracking-wider py-1.5 px-4 rounded transition-colors">REMOVE</button>';
+        }
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      html += '</div>';
+      list.innerHTML = html;
+    }
+
+    function showRoleForm(role) {
+      editingRoleId = role ? role.id : null;
+      document.getElementById('role-form-title').textContent = role ? 'EDIT ADMIN' : 'ADD NEW ADMIN';
+      document.getElementById('role-email').value = role ? (role.email || '') : '';
+      document.getElementById('role-email').disabled = !!role;
+      document.getElementById('role-name').value = role ? (role.displayName || '') : '';
+      document.getElementById('role-superadmin-cb').checked = role ? !!role.superadmin : false;
+
+      var divs = role ? (role.divisions || []) : [];
+      document.querySelectorAll('.role-div-cb').forEach(function(cb) {
+        cb.checked = divs.indexOf(cb.value) !== -1;
+      });
+
+      document.getElementById('role-form-wrap').classList.remove('hidden');
+      document.getElementById('role-email').focus();
+    }
+
+    function hideRoleForm() {
+      editingRoleId = null;
+      document.getElementById('role-form-wrap').classList.add('hidden');
+    }
+
+    function editRole(id) {
+      var r = allRoles.find(function(x) { return x.id === id; });
+      if (r) showRoleForm(r);
+    }
+
+    async function deleteRole(id) {
+      var r = allRoles.find(function(x) { return x.id === id; });
+      if (!r) return;
+      if (!confirm('Remove admin access for ' + r.email + '?')) return;
+
+      try {
+        await db.collection('adminRoles').doc(id).delete();
+        allRoles = allRoles.filter(function(x) { return x.id !== id; });
+        renderRoles();
+        showToast('Removed: ' + r.email, 'success');
+      } catch(e) {
+        console.error('Delete role error:', e);
+        showToast('Failed: ' + e.message, 'error');
+      }
+    }
+
+    document.getElementById('add-role-btn').addEventListener('click', function() {
+      showRoleForm(null);
+    });
+
+    document.getElementById('role-cancel-btn').addEventListener('click', function() {
+      hideRoleForm();
+    });
+
+    document.getElementById('role-save-btn').addEventListener('click', async function() {
+      var email = document.getElementById('role-email').value.trim().toLowerCase();
+      if (!email) { alert('Email is required.'); return; }
+
+      var displayName = document.getElementById('role-name').value.trim();
+      var superadmin = document.getElementById('role-superadmin-cb').checked;
+      var divisions = [];
+      document.querySelectorAll('.role-div-cb').forEach(function(cb) {
+        if (cb.checked) divisions.push(cb.value);
+      });
+
+      if (superadmin && divisions.length === 0) {
+        divisions = ["1","2","3","4","5","6","7"];
+      }
+
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'SAVING...';
+
+      try {
+        var data = {
+          email: email,
+          displayName: displayName || null,
+          superadmin: superadmin,
+          divisions: divisions,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy: auth.currentUser.email
+        };
+
+        if (editingRoleId) {
+          await db.collection('adminRoles').doc(editingRoleId).update(data);
+          var idx = allRoles.findIndex(function(x) { return x.id === editingRoleId; });
+          if (idx !== -1) allRoles[idx] = Object.assign({ id: editingRoleId }, data);
+          showToast('Updated: ' + email, 'success');
+        } else {
+          var exists = allRoles.find(function(x) { return x.email && x.email.toLowerCase() === email; });
+          if (exists) {
+            alert('An admin with this email already exists. Use Edit instead.');
+            btn.disabled = false;
+            btn.textContent = 'SAVE';
+            return;
+          }
+          var docRef = await db.collection('adminRoles').add(data);
+          allRoles.push(Object.assign({ id: docRef.id }, data));
+          showToast('Added: ' + email, 'success');
+        }
+
+        renderRoles();
+        hideRoleForm();
+      } catch(e) {
+        console.error('Save role error:', e);
+        showToast('Save failed: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'SAVE';
+      }
+    });
+
+    // =====================================================
+    //  DELETE NOMINATIONS (SUPERADMIN ONLY)
+    // =====================================================
+    async function deleteNomination(id) {
+      if (!isSuperAdmin) return;
+      var n = allNominations.find(function(x) { return x.id === id; });
+      if (!n) return;
+      if (!confirm('Delete nomination for "' + n.nomineeName + '"?\n\nThis cannot be undone.')) return;
+
+      try {
+        if (n.photoUrl) {
+          var path = extractStoragePath(n.photoUrl);
+          if (path) {
+            try { await storage.ref(path).delete(); } catch(e) { console.warn('Photo delete failed:', e); }
+          }
+        }
+        await db.collection('nominations').doc(id).delete();
+        selectedNominations.delete(id);
+        document.getElementById('detail-modal').classList.add('hidden');
+        showToast('Deleted: ' + n.nomineeName, 'success');
+      } catch(err) {
+        console.error('Delete error:', err);
+        alert('Delete failed: ' + err.message);
+      }
+    }
+
+    document.getElementById('delete-selected-btn').addEventListener('click', async function() {
+      if (!isSuperAdmin) return;
+      var count = selectedNominations.size;
+      if (count === 0) { alert('No nominations selected.'); return; }
+      if (!confirm('Delete ' + count + ' selected nomination(s)?\n\nThis cannot be undone.')) return;
+
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'DELETING...';
+      var deleted = 0;
+      var errors = 0;
+
+      var ids = Array.from(selectedNominations);
+      for (var i = 0; i < ids.length; i++) {
+        var id = ids[i];
+        var n = allNominations.find(function(x) { return x.id === id; });
+        try {
+          if (n && n.photoUrl) {
+            var path = extractStoragePath(n.photoUrl);
+            if (path) {
+              try { await storage.ref(path).delete(); } catch(e) { console.warn('Photo delete failed:', e); }
+            }
+          }
+          await db.collection('nominations').doc(id).delete();
+          selectedNominations.delete(id);
+          deleted++;
+          btn.textContent = 'DELETING ' + deleted + ' / ' + count + '...';
+        } catch(e) {
+          console.error('Delete error for ' + id, e);
+          errors++;
+        }
+      }
+
+      btn.disabled = false;
+      updateDownloadButton();
+      if (errors > 0) {
+        showToast('Deleted ' + deleted + ', failed ' + errors, 'error');
+      } else {
+        showToast('Deleted ' + deleted + ' nomination(s)', 'success');
+      }
+    });
+
+    // =====================================================
+    //  DOWNLOAD SELECTED PHOTOS AS ZIP
+    // =====================================================
+    function extractStoragePath(url) {
+      try {
+        var match = url.match(/\/o\/(.+?)(\?|$)/);
+        if (match) return decodeURIComponent(match[1]);
+      } catch(e) {}
+      return null;
+    }
+
+    function downloadBlob(blob, filename) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 60000);
+    }
+
+    function fetchPhoto(n) {
+      return new Promise(function(resolve) {
+        var xhr = new XMLHttpRequest();
+        xhr.responseType = 'blob';
+        xhr.onload = function() { resolve(xhr.status === 200 ? xhr.response : null); };
+        xhr.onerror = function() { resolve(null); };
+        xhr.ontimeout = function() { resolve(null); };
+        xhr.timeout = 30000;
+        xhr.open('GET', n.photoUrl);
+        xhr.send();
+      });
+    }
+
+    function showProgress(show) {
+      document.getElementById('download-progress').classList.toggle('hidden', !show);
+    }
+    function setProgress(done, total, text) {
+      var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      document.getElementById('progress-bar-fill').style.width = pct + '%';
+      document.getElementById('progress-text').textContent = text || ('Downloading ' + done + ' / ' + total + ' photos...');
+    }
+
+    document.getElementById('cancel-download-btn').addEventListener('click', function() {
+      downloadCancelled = true;
+    });
+
+    document.getElementById('download-selected-btn').addEventListener('click', async function() {
+      var downloadList = allNominations.filter(function(n) {
+        return selectedNominations.has(n.id) && n.photoUrl;
+      });
+      if (downloadList.length === 0) { alert('No photos to download. Select nominations that have photos.'); return; }
+
+      var btn = this;
+      btn.disabled = true;
+      downloadCancelled = false;
+      showProgress(true);
+      setProgress(0, downloadList.length);
+
+      try {
+        var zip = new JSZip();
+        var photosFolder = zip.folder('photos');
+        var failed = [];
+        var done = 0;
+        var BATCH_SIZE = 5;
+
+        var headers = ['Nominee Name','Category','Years Active','Reason','Nominator Name','Nominator Email','Division','Division Name','Photo Filename','Photo URL','Submitted'];
+        var rows = [];
+
+        for (var b = 0; b < downloadList.length; b += BATCH_SIZE) {
+          if (downloadCancelled) break;
+          var batch = downloadList.slice(b, b + BATCH_SIZE);
+
+          var results = await Promise.allSettled(batch.map(function(n, idx) {
+            var i = b + idx;
+            var safeName = (n.nomineeName || 'nominee-' + i).replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_').substring(0, 60);
+            var nominatorLast = '';
+            if (n.nominatorName) {
+              var parts = n.nominatorName.trim().split(/\s+/);
+              nominatorLast = parts[parts.length - 1].replace(/[^a-zA-Z0-9_-]/g, '');
+            }
+            var ext = '.jpg';
+            var urlLower = n.photoUrl.toLowerCase();
+            if (urlLower.indexOf('.png') !== -1 || urlLower.indexOf('image%2fpng') !== -1) ext = '.png';
+            else if (urlLower.indexOf('.gif') !== -1) ext = '.gif';
+            else if (urlLower.indexOf('.webp') !== -1) ext = '.webp';
+            else if (urlLower.indexOf('.avif') !== -1) ext = '.avif';
+
+            var photoFilename = 'D' + n.division + '_' + safeName + (nominatorLast ? '_Nom_by_' + nominatorLast : '') + ext;
+
+            return fetchPhoto(n).then(function(blob) {
+              return { nom: n, blob: blob, filename: photoFilename, safeName: safeName };
+            });
+          }));
+
+          results.forEach(function(r) {
+            if (r.status === 'fulfilled' && r.value) {
+              var v = r.value;
+              var date = v.nom.submittedAt ? new Date(v.nom.submittedAt.seconds * 1000).toISOString() : '';
+              if (v.blob) {
+                photosFolder.file(v.filename, v.blob);
+              } else {
+                failed.push(v.nom.nomineeName || 'unknown');
+              }
+              rows.push([
+                csvEscape(v.nom.nomineeName),
+                csvEscape(CATEGORY_LABELS[v.nom.category] || v.nom.category),
+                csvEscape(v.nom.yearsActive || ''),
+                csvEscape(v.nom.reason || ''),
+                csvEscape(v.nom.nominatorName || ''),
+                csvEscape(v.nom.nominatorEmail || ''),
+                v.nom.division,
+                csvEscape(v.nom.divisionName || ''),
+                csvEscape(v.blob ? v.filename : 'FAILED'),
+                v.nom.photoUrl || '',
+                date
+              ].join(','));
+            }
+            done++;
+          });
+
+          setProgress(done, downloadList.length);
+        }
+
+        var csv = headers.join(',') + '\n' + rows.join('\n');
+        zip.file('nominations.csv', csv);
+
+        setProgress(done, downloadList.length, 'Building ZIP...');
+        var content = await zip.generateAsync({ type: 'blob' }, function(metadata) {
+          setProgress(done, downloadList.length, 'Zipping ' + Math.round(metadata.percent) + '%...');
+        });
+
+        var zipName = 'NHRA-Selected-' + downloadList.length + '-' + new Date().toISOString().slice(0,10) + '.zip';
+        downloadBlob(content, zipName);
+
+        if (downloadCancelled) {
+          showToast('Download cancelled. Partial ZIP saved.', 'success');
+        } else if (failed.length > 0) {
+          showToast(failed.length + ' photo(s) failed to download', 'error');
+        } else {
+          showToast('ZIP downloaded with ' + downloadList.length + ' photos!', 'success');
+        }
+      } catch(err) {
+        console.error('Download error:', err);
+        alert('Error creating download: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        showProgress(false);
+        updateDownloadButton();
+      }
+    });
+  </script>
+</body>
+</html>

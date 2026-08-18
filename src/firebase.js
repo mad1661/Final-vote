@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -20,8 +20,12 @@ const firebaseConfig = {
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
-// Firestore database for storing votes
-export const db = getFirestore(app);
+// Firestore database for storing votes. Long-polling auto-detection is
+// forced on so the realtime stream also works inside cross-site iframes
+// (division-site embeds) where WebChannel streaming can be blocked.
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+});
 
 // Analytics is only available in browser environments that support it
 export let analytics = null;

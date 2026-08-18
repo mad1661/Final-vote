@@ -1,20 +1,27 @@
 # Legend Vote
 
 Per-division voting for NHRA legends, backed by Firebase (project:
-`voting-10a21`). Completely separate from the nomination site — this deploys
-to its own Hosting site and each Division 1–7 website embeds its own voting
-widget.
+`voting-10a21`). It ships alongside the 75 Most Influential nomination app on
+the same Hosting site without altering it, and each Division 1–7 website
+embeds its own voting widget.
 
 ## Pages
 
-- `/` — division picker; `/?div=3` — full-page vote for Division 3
-- `/embed.html?div=3` — compact widget for embedding in division sites
+- `/` — the 75 Most Influential nomination app, deployed byte-for-byte from
+  `original-app/public` along with its own `/admin.html` and
+  `/asset-manager.html`. The vote never touches it.
+- `/vote` — full-page ballot; `/vote?div=3` pins Division 3
+- `/embed.html?div=3` — the same widget, sized for embedding in division sites
+- `/vote-admin.html` — vote admin (Google or email/password sign-in): manage
+  candidates, bios, photos and categories, merge duplicates, bulk add or
+  import from Excel, read the results table, export CSVs, upload the header
+  logo, and copy embed codes for each division
 
-Public pages show only the candidate list (alphabetical) — vote counts,
-percentages, and rankings are visible only in the admin console.
-- `/admin.html` — admin console (Google sign-in): bulk add names by pasting
-  or uploading Excel/CSV, live results table across all divisions, remove
-  names, and copy-paste embed codes for each division
+Public pages show only the candidate list, alphabetical. Vote counts,
+percentages, and rankings appear only in the vote admin.
+
+**`/admin.html` is the nomination app's own console, not this one** — the
+vote admin is always `/vote-admin.html`.
 
 ## Setup
 
@@ -28,12 +35,27 @@ npm run dev
 - `names/{slug}` — one doc per candidate, shared by all divisions. The
   reader tolerates any doc shape (`name`/`value`/`text`/`title` field or the
   doc id itself). Bulk adds are chunked batches; slug keying merges
-  duplicates.
+  duplicates. Its `name`, `bio`, `photoUrl` and `category` fields are the
+  admin's overrides: whatever is set here wins over what the nomination form
+  carried, so a nominee submitted with the wrong category (or none) can be
+  corrected in the vote admin's per-candidate editor without touching the
+  original submission.
 - `votes/d{division}_{nameId}` — one tally doc per name **per division**:
   `{ count, division, nameId, updatedAt }`. Votes are atomic +1 increments.
   Existing name docs are never modified by voting.
 
-A localStorage flag limits each browser to one vote per division.
+- `voted/d{division}_{hash}` — the one-ballot-per-person marker: a SHA-256
+  hash of the voter's email, no address stored. Create-only, so a second
+  ballot from the same email is refused by the rules — and because the
+  tallies are written in the same batch, the whole ballot is refused with it.
+- `voters/d{division}_{hash}` — the matching record (`name`, `email`,
+  `division`, `picks`), readable by the admin only, exported from the
+  vote admin page.
+
+Voters must enter a name and email on the confirm step before their picks
+count. Gmail aliases (`m.ark+vote@gmail.com`) normalize to one identity, so
+tagged addresses can't be used to vote repeatedly. A localStorage flag also
+stops the same browser from re-opening the ballot in a division.
 
 ## Admin setup (one-time, Firebase console)
 
@@ -48,36 +70,126 @@ A localStorage flag limits each browser to one vote per division.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Every admin address goes in this list. Anyone not listed can still
+    // sign in and look around, but every save, merge, removal and upload is
+    // refused — the vote admin page says so on load rather than failing
+    // later with a vague error.
     function isAdmin() {
       return request.auth != null
-             && request.auth.token.email == 'YOUR-EMAIL@gmail.com';
+             && request.auth.token.email in [
+                  'mad1661@gmail.com',
+                  'mdawson@nhra.com',
+                  'mdeyoung@nhra.com'
+                  // , 'another.admin@example.com'
+                ];
     }
     match /names/{nameId} {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /nominations/{nomId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+    match /divisionAssets/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // A ballot only counts when it arrives with a brand-new voter marker in
+    // the same batch, so tallies can't be bumped without identifying a voter.
+    function withBallot() {
+      return request.resource.data.ballot is string
+             && getAfter(/databases/$(database)/documents/voted/$(request.resource.data.ballot))
+                  .data.division == request.resource.data.division;
+    }
     match /votes/{voteId} {
       // Tallies are admin-only: visitors can cast votes but never read
       // the counts, in the UI or via direct Firestore queries.
       allow read: if isAdmin();
-      allow create: if request.resource.data.count == 1
-                    && request.resource.data.division is int
+      allow create: if isAdmin()
+                    || (request.resource.data.count >= 1
+                        && request.resource.data.count <= 5
+                        && request.resource.data.division is int
+                        && request.resource.data.division >= 1
+                        && request.resource.data.division <= 7
+                        && withBallot());
+      allow update: if isAdmin()
+                    || (request.resource.data.diff(resource.data)
+                          .affectedKeys().hasOnly(['count', 'updatedAt', 'ballot'])
+                        && request.resource.data.count > resource.data.count
+                        && request.resource.data.count <= resource.data.count + 5
+                        && withBallot());
+      allow delete: if isAdmin();
+    }
+    // One ballot per email per division. The id is d{division}_{hash of the
+    // email}, and create-only means a second attempt is rejected — which
+    // fails the whole batch, tallies included. No addresses are stored here.
+    match /voted/{voterId} {
+      allow read: if true;
+      allow create: if request.resource.data.division is int
                     && request.resource.data.division >= 1
-                    && request.resource.data.division <= 7;
-      allow update: if request.resource.data.diff(resource.data)
-                       .affectedKeys().hasOnly(['count', 'updatedAt'])
-                    && request.resource.data.count == resource.data.count + 1;
+                    && request.resource.data.division <= 7
+                    && request.resource.data.voterHash is string
+                    && voterId == 'd' + string(request.resource.data.division)
+                                  + '_' + request.resource.data.voterHash
+                    // ...and only alongside the name/email record itself
+                    && getAfter(/databases/$(database)/documents/voters/$(voterId))
+                         .data.voterHash == request.resource.data.voterHash;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+    // The matching record with the voter's name and email — write-once by
+    // the public, readable only by the admin.
+    match /voters/{voterId} {
+      allow read: if isAdmin();
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.name.size() >= 2
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() >= 5
+                    && request.resource.data.division is int
+                    && request.resource.data.voterHash is string
+                    && voterId == 'd' + string(request.resource.data.division)
+                                  + '_' + request.resource.data.voterHash;
+      allow update: if false;
       allow delete: if isAdmin();
     }
   }
 }
 ```
 
-Visitors can cast +1 votes but cannot read the tallies; only the admin can
-see results and manage names. If you previously pasted an older version of
-these rules (with `allow read: if true` on votes), re-paste this block —
-the public pages no longer show or fetch vote counts, but the rules are
-what actually stop someone from querying the numbers directly.
+Visitors can cast votes but cannot read the tallies; only the admin can see
+results, manage names, or read the voter list. If you previously pasted an
+older version of these rules (with `allow read: if true` on votes), re-paste
+this block — the ballot no longer shows or fetches vote counts, but the
+rules are what actually stop someone from querying the numbers directly.
+
+### Adding another admin
+
+Add the address to the `isAdmin()` list above and publish the rules again —
+that list is the only thing that grants access, and Firebase Authentication
+being able to sign someone in does not. Signing in with an unlisted address
+looks like it worked (the console loads and shows everything) but every
+write is refused, which is why the page probes its own access on load and
+names the account in the banner and in every error.
+
+## Header logo
+
+The '51 Legends shield at the top of the vote page and every embedded widget
+is uploaded from the vote admin's **Header logo** section — no file copying
+or redeploy needed. It saves to Storage under `division-assets/vote/` (the
+prefix the deployed Storage rules already allow the admin to write) and
+records the URL in `divisionAssets/vote51`, a doc the nomination app never
+touches. Choosing a single division instead writes `divisionAssets/vote51_d{n}`
+and only that division's ballot changes.
+
+If nothing is uploaded the widget falls back, in order, to
+`/51-legends-d{division}.png`, `/51-legends.png`, the nomination app's
+`logo75` asset, and finally `/nhra-75-logo.png`.
 
 ## Embedding in division sites
 
@@ -86,13 +198,28 @@ division from the embedding site's domain (`nhradiv1.com` → Division 1,
 `nhradiv2.com` → Division 2, … any `div<1-7>`/`division<1-7>` in the
 hostname):
 
+Copy the snippet from the vote admin's iframe creator — it pairs the frame
+with a short script:
+
 ```html
 <iframe
-  src="https://legendvote-final.web.app/embed.html"
-  title="Legend Vote"
-  style="width:100%;max-width:560px;height:640px;border:0;border-radius:16px;background:#0d0d13"
+  data-legend-vote
+  src="https://voting-10a21.web.app/embed.html"
+  title="'51 Legends Vote"
+  style="width:100%;height:900px;border:0;border-radius:16px;background:#000"
 ></iframe>
+<script>/* grows the frame + reports the visitor's screen position */</script>
 ```
+
+The script does two jobs. It grows the frame to fit the ballot, so the page
+scrolls as one with no inner scrollbar. And on scroll it posts the frame's
+position back to the widget — a cross-origin frame can't see the parent's
+scroll — which is what lets the Submit button ride down the screen instead
+of scrolling out of view.
+
+Both are graceful about being absent. Without the script the widget notices
+the frame isn't growing and gives itself a scrollbar, so the whole ballot is
+still reachable; the Submit button then stays pinned inside the widget.
 
 If a site's domain doesn't contain its division number, pin it explicitly
 with `embed.html?div=N` (the admin page has copy buttons for both forms).
@@ -101,16 +228,32 @@ division chooser so it still works anywhere.
 
 ## Deploy
 
-Deploys to the dedicated Hosting site `legendvote-final` — the nomination
-site and other Hosting sites in the project are never touched.
+Deploys to the `vote` Hosting target, which `.firebaserc` maps to the
+`voting-10a21` site. The build assembles the nomination app and the vote
+pages into one `dist/`, so the nomination site keeps `/` byte-for-byte.
 
 ```bash
 npm run build
 firebase deploy --only hosting:vote
 ```
 
-- Vote site: **https://legendvote-final.web.app**
-- Admin: **https://legendvote-final.web.app/admin.html**
+If the CLI answers `Deploy target vote not configured for project <something
+else>`, it is using an active project left over from another repo — the
+project lives in `.firebaserc` but `firebase use` overrides it. Point it
+back, once per clone:
+
+```bash
+firebase use voting-10a21
+```
+
+- Vote page: **https://voting-10a21.web.app/vote**
+- Embed widget: **https://voting-10a21.web.app/embed.html**
+- Vote admin: **https://voting-10a21.web.app/vote-admin.html**
+- Nomination app (untouched): **https://voting-10a21.web.app/** and its own
+  `/admin.html`
+
+Confirm the deploy landed by checking the version stamp in the ballot's
+footer against `VERSION` in `src/embed.js`.
 
 ## Reference
 
