@@ -1,20 +1,27 @@
 # Legend Vote
 
 Per-division voting for NHRA legends, backed by Firebase (project:
-`voting-10a21`). Completely separate from the nomination site — this deploys
-to its own Hosting site and each Division 1–7 website embeds its own voting
-widget.
+`voting-10a21`). It ships alongside the 75 Most Influential nomination app on
+the same Hosting site without altering it, and each Division 1–7 website
+embeds its own voting widget.
 
 ## Pages
 
-- `/` — division picker; `/?div=3` — full-page vote for Division 3
-- `/embed.html?div=3` — compact widget for embedding in division sites
+- `/` — the 75 Most Influential nomination app, deployed byte-for-byte from
+  `original-app/public` along with its own `/admin.html` and
+  `/asset-manager.html`. The vote never touches it.
+- `/vote` — full-page ballot; `/vote?div=3` pins Division 3
+- `/embed.html?div=3` — the same widget, sized for embedding in division sites
+- `/vote-admin.html` — vote admin (Google or email/password sign-in): manage
+  candidates, bios, photos and categories, merge duplicates, bulk add or
+  import from Excel, read the results table, export CSVs, upload the header
+  logo, and copy embed codes for each division
 
-Public pages show only the candidate list (alphabetical) — vote counts,
-percentages, and rankings are visible only in the admin console.
-- `/admin.html` — admin console (Google sign-in): bulk add names by pasting
-  or uploading Excel/CSV, live results table across all divisions, remove
-  names, and copy-paste embed codes for each division
+Public pages show only the candidate list, alphabetical. Vote counts,
+percentages, and rankings appear only in the vote admin.
+
+**`/admin.html` is the nomination app's own console, not this one** — the
+vote admin is always `/vote-admin.html`.
 
 ## Setup
 
@@ -221,16 +228,32 @@ division chooser so it still works anywhere.
 
 ## Deploy
 
-Deploys to the dedicated Hosting site `legendvote-final` — the nomination
-site and other Hosting sites in the project are never touched.
+Deploys to the `vote` Hosting target, which `.firebaserc` maps to the
+`voting-10a21` site. The build assembles the nomination app and the vote
+pages into one `dist/`, so the nomination site keeps `/` byte-for-byte.
 
 ```bash
 npm run build
 firebase deploy --only hosting:vote
 ```
 
-- Vote site: **https://legendvote-final.web.app**
-- Admin: **https://legendvote-final.web.app/admin.html**
+If the CLI answers `Deploy target vote not configured for project <something
+else>`, it is using an active project left over from another repo — the
+project lives in `.firebaserc` but `firebase use` overrides it. Point it
+back, once per clone:
+
+```bash
+firebase use voting-10a21
+```
+
+- Vote page: **https://voting-10a21.web.app/vote**
+- Embed widget: **https://voting-10a21.web.app/embed.html**
+- Vote admin: **https://voting-10a21.web.app/vote-admin.html**
+- Nomination app (untouched): **https://voting-10a21.web.app/** and its own
+  `/admin.html`
+
+Confirm the deploy landed by checking the version stamp in the ballot's
+footer against `VERSION` in `src/embed.js`.
 
 ## Reference
 
